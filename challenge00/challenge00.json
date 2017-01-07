@@ -1,0 +1,11 @@
+{
+	"Id": "0",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntuaslr",
+
+	"Title": "Introduction to memory layout - basic",
+	"Description": "Step-by-step Analysis of an ELF binary",
+
+	"TextFilename": "challenge00.md",
+	"Active": true
+}

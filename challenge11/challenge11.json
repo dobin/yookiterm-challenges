@@ -1,0 +1,11 @@
+{
+	"Id": "11",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title": "Development of a buffer overflow exploit - 32 bit",
+	"Description": "How to create a simple buffer overflow exploit",
+
+	"TextFilename": "challenge11.md",
+	"Active": true
+}

@@ -1,0 +1,11 @@
+{
+	"Id": "8",
+	"ContainerBaseName":"hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Buffer analysis",
+	"Description": "Out of bound read",
+
+	"TextFilename": "challenge08.md",
+	"Active": true
+}

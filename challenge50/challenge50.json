@@ -1,0 +1,11 @@
+{
+	"Id": "50",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Introduction to GDB",
+	"Description": "A reference and playground for GDB",
+
+	"TextFilename": "challenge50.md",
+	"Active": true
+}

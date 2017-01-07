@@ -1,0 +1,11 @@
+{
+	"Id": "7",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title": "Function Call Convention in x86",
+	"Description": "Analysis of function calling",
+
+	"TextFilename": "challenge07.md",
+	"Active": true
+}

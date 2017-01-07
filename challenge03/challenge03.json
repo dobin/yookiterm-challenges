@@ -1,0 +1,11 @@
+{
+	"Id": "3",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Introduction to shellcode development",
+	"Description": "Create a basic running shellcode",
+
+	"TextFilename": "challenge03.md",
+	"Active": true
+}

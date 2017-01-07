@@ -1,0 +1,11 @@
+{
+	"Id": "13",
+	"ContainerBaseName": "hlUbuntu64",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title": "Development of a remote buffer overflow exploit - 64 bit",
+	"Description": "How to create a remote buffer overflow exploit",
+
+	"TextFilename": "challenge13.md",
+	"Active": true
+}

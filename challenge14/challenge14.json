@@ -1,0 +1,11 @@
+{
+	"Id": "14",
+	"ContainerBaseName": "hlUbuntu64",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Stack canary brute force",
+	"Description": "How to brute force the stack canary in a remote server",
+
+	"TextFilename": "challenge14.md",
+	"Active": true
+}

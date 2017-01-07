@@ -1,0 +1,11 @@
+{
+	"Id": "10",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Simple Buffer overflow",
+	"Description": "Overwrite local variables on the stack",
+
+	"TextFilename": "challenge10.md",
+	"Active": true
+}

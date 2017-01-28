@@ -1,0 +1,11 @@
+{
+	"Id": "31",
+	"ContainerBaseName":"hlUbuntu64",
+	"ContainerHostAlias": "ubuntuaslr",
+
+	"Title": "Heap use after free",
+	"Description": "Simple use after free",
+
+	"TextFilename": "challenge31.md",
+	"Active": true
+}

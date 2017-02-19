@@ -5,7 +5,8 @@
 
 	"Title":"Development of a buffer overflow exploit - 64 bit",
 	"Description": "How to create a simple buffer overflow exploit",
-
+	"DocType": "writeup",
+	
 	"TextFilename": "challenge12.md",
 	"Active": true
 }

@@ -1,7 +1,20 @@
-# Brute force stack canary
+# Stack canary brute force
+
+
+## Introduction
+
+Stack canary protect the saved instruction pointer (SIP) on the stack
+from an stack based overflow. But fork() networked servers allow byte-per-byte
+brute-force of the stack canary. In this challenge we will implement such a
+brute-force program.
+
+## Goal
+
+* Implement a stack canary bruteforcer
+* Get our static and dynamic analysis skills to the next level
+
 
 ## Source
-
 
 ```c
 #include <stdio.h>

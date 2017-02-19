@@ -4,7 +4,7 @@
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Development of a remote buffer overflow exploit - 64 bit with ASLR",
-	"Description": "How to create a realistic remote buffer overflow exploit",
+	"Description": "How to create a contemporary remote buffer overflow exploit",
 
 	"TextFilename": "challenge15.md",
 	"Active": true

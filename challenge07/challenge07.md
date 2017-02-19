@@ -1,7 +1,15 @@
-# Function Call Convention in x86
+# Function Call Convention in x86 (32bit)
+
+## Introduction
 
 In this challenge, we'll analyze the call convention of a binary. This binary
 contains different functions with different parameters.
+
+## Goal
+
+* See function call convention in action
+* Get a feeling how function call convention looks like in assembly
+
 
 ## source
 
@@ -69,6 +77,8 @@ Dump of assembler code for function functionMinimal:
 End of assembler dump.
 ```
 
+The only command of the function is `nop` (do nothing).
+
 ### functionBasic()
 
 This function takes an integer as a parameter, copies it to a local stack
@@ -108,11 +118,21 @@ Dump of assembler code for function main:
 ```
 
 The argument of `functionBasic()`, 0x5, is stored on the stack. It is referenced
-via ebp+0x8. The return value is stored in the register `eax`.
+via `ebp+0x8`. The return value is stored in the register `eax`.
 
 
 ### functionAdvanced()
 
+The `functionAdvanced` takes two char pointer as arguments, and returns a char pointer:
+
+```c
+char* functionAdvanced(char *a, char *b) {
+        strcpy(a, b);
+        return a;
+}
+```
+
+The disassembly:
 ```sh
 gdb-peda$ disas functionAdvanced
 Dump of assembler code for function functionAdvanced:
@@ -129,6 +149,20 @@ Dump of assembler code for function functionAdvanced:
    0x08048440 <+27>:    ret
 ```
 
+It is called like this in `main()`:
+
+```
+0x08048475 <+52>:    push   DWORD PTR [ebp-0x14]                               
+0x08048478 <+55>:    push   DWORD PTR [ebp-0x18]                               
+0x0804847b <+58>:    call   0x8048425 <functionAdvanced>                       
+0x08048480 <+63>:    add    esp,0x10                                           
+0x08048483 <+66>:    mov    DWORD PTR [ebp-0xc],eax                            
+```
+
+The arguments are pushed on the stack before the `call`. They get cleaned up
+by calling `add esp, 0x10` which increments esp by 16 bytes. The return value
+of `functionAdvanced` is stored in `ebp-0xc`, which seems to be `ret3`.
+
 
 ## Questions
 
@@ -142,3 +176,7 @@ Dump of assembler code for function functionAdvanced:
 
 * The code was compiled without any optimization (-O0). What happens if you enable optimization?
 * The code was also compiled with `-fno-omit-frame-pointer`. What happens if you compile it without this parameter? Why could this be useful?
+
+### Tertiary
+
+* Compile the code on an 64 bit machine. Analyse the call convention again.

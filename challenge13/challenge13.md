@@ -1,4 +1,15 @@
-# Remote Exploit
+# Development of a remote buffer overflow exploit - 64 bit
+
+## Introduction
+
+We will create a functional exploit for a remote 64 bit program with a stack overflow vulnerability. This includes
+finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
+python program.
+
+## Goal
+
+* Implement a fully working exploit for x64 server program
+* Get our static and dynamic analysis skills to the next level
 
 ## Source
 
@@ -127,6 +138,39 @@ int main( int argc, char *argv[] ) {
    } /* end of while */
 }
 ```
+
+
+
+## Vulnerability
+
+The vulnerability lies here:
+
+```
+void handleData(char *username, char *password) {
+	[...]
+	char firstname[256];
+
+	[...]
+	strcpy(firstname, username);
+	[...]
+}
+
+
+void doprocessing (int sock) {
+	char username[1024];
+	[...]
+	int n;
+
+	n = read(sock, username, 1023);
+	[...]
+	handleData(username, password);
+}
+```
+
+The server reads a maximum of 1023 bytes, and copies it into a username buffer
+of size 1024 bytes. It then gives this buffer to the function `handleData` as
+argument `username`, which in turn copies it in a buffer which is only 256 bytes.
+
 
 ## Debugging notes
 

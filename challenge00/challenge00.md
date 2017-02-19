@@ -1,7 +1,21 @@
-# Introduction to memory layout basic
+# Introduction to memory layout - basic
+
+## Introduction
 
 In this challenge, we will look at some basic Linux tools which display information
-about the used memory regions in a program or a process.
+about the used memory regions in a program (static analysis) or a process (dynamic analysis).
+
+Tools used:
+* file
+* readelf
+* objdump
+* gdb
+
+
+## Goal
+
+- Learn about memory layout and ELF
+- Get a feeling of useful Linux tools
 
 
 ## Source

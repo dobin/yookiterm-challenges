@@ -1,8 +1,15 @@
-# BoF intro
+# Development of a buffer overflow exploit - 32 bit
 
 ## Introduction
 
+We will create a functional exploit for a 32 bit program with a stack overflow vulnerability. This includes
+finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
+python program
+
 ## Goal
+
+* Implement a fully working exploit
+* Get our static and dynamic analysis skills to the next level
 
 ## Source
 
@@ -59,12 +66,39 @@ int main(int argc, char **argv) {
 
 You can compile it by calling `make` in the folder `~/challenges/challenge11`
 
+## Vulnerability
+
+The vulnerability lies here:
+
+```
+void handleData(char *username, char *password) {
+	[...]
+	char firstname[64];
+
+	[...]
+	strcpy(firstname, username);
+	[...]
+}
+
+
+int main(int argc, char **argv) {
+	[...]
+	handleData(argv[1], argv[2]);
+}
+```
+
+The second argument of the program is copied into a stack buffer of 64 byte size.
+
+
+
 ## Analysis
 
 ```
 $ file challenge11
 vulnerable: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=f6b1aab172bde7f561e30ef84f253da4a081d8d7, not stripped
 ```
+
+
 
 ## Normal behaviour
 

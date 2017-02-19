@@ -1,4 +1,17 @@
-# Buffer analysis
+# C buffer analysis
+
+## Introduction
+
+We have a vulnerable program which allows us to perform out-of-bound reads.
+By debugging and analyzing it we will look at internal stack data of the process by
+supplying adequate program inputs.
+
+
+## Goal
+
+* Understand C arrays by misusing them
+* Get comfortable with gdb
+* Deeper understanding of the stack
 
 ## Source
 
@@ -25,7 +38,14 @@ Number at index 4: 0x5
 Number at index 5: 0xf7fcb3dc
 ```
 
+The value at index 4 is as expected 0x5. But the value at index 5 seems to be arbitrary or
+random. Index 5 is also the 6th entry of the array with size 5. Letrs try to identify
+what this value `0xf7fcb3dc` depicts.
+
+
 ## Debugging
+
+
 
 Lets debug the binary. Start gdb, and disas the `main` function:
 

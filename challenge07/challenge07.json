@@ -3,8 +3,10 @@
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title": "Function Call Convention in x86",
-	"Description": "Analysis of function calling",
+	"Title": "Function Call Convention in x86 (32bit)",
+	"Description": "Analysis of function calling (gdb static and dynamic analysis)",
+	"DocType": "challenge",
+
 
 	"TextFilename": "challenge07.md",
 	"Active": true

@@ -4,7 +4,8 @@
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Development of a remote buffer overflow exploit - 64 bit",
-	"Description": "How to create a remote buffer overflow exploit",
+	"Description": "How to create a buffer overflow exploit for a networked server",
+	"DocType": "writeup",
 
 	"TextFilename": "challenge13.md",
 	"Active": true

@@ -1,8 +1,15 @@
-# BoF intro
+# Development of a buffer overflow exploit - 64 bit
 
 ## Introduction
 
+We will create a functional exploit for a 64 bit program with a stack overflow vulnerability. This includes
+finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
+python program
+
 ## Goal
+
+* Implement a fully working exploit for x64
+* Get our static and dynamic analysis skills to the next level
 
 ## Source
 
@@ -67,7 +74,29 @@ root@hlUbuntu64:~/challenges/challenge12# file challenge12
 challenge12: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=9397ca5655aeb327386bb0d572717f9906978301, not stripped
 ```
 
-## Normal behaviour
+
+## Vulnerability
+
+The vulnerability lies here:
+
+```
+void handleData(char *username, char *password) {
+	[...]
+	char firstname[64];
+
+	[...]
+	strcpy(firstname, username);
+	[...]
+}
+
+
+int main(int argc, char **argv) {
+	[...]
+	handleData(argv[1], argv[2]);
+}
+```
+
+The second argument of the program is copied into a stack buffer of 64 byte size.
 
 
 ## Find offset

@@ -4,7 +4,8 @@
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Simple Buffer overflow",
-	"Description": "Overwrite local variables on the stack",
+	"Description": "Overwrite local variables on the stack to bypass authentication",
+	"DocType": "writeup",
 
 	"TextFilename": "challenge10.md",
 	"Active": true

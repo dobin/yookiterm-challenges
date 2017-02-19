@@ -1,9 +1,16 @@
-# Buffer overflow - overwrite variables on the stack
+# Simple Buffer overflow
 
 ## Intro
 
 We will perform a simple buffer overflow on a binary. This overflow
 will change the function flow, which enables us to gain "admin" privileges.
+
+
+## Goal
+
+* Understand C arrays by misusing them
+* Get comfortable with gdb
+* Deeper understanding of the stack
 
 
 ## Vulnerable program
@@ -64,6 +71,31 @@ int main(int argc, char **argv) {
 ```
 
 You can compile it by calling `make` in the folder `~/challenges/challenge10`
+
+
+## Vulnerability
+
+The vulnerability lies here:
+
+```
+void handleData(char *username, char *password) {
+	int isAdmin = 0;
+	char firstname[64];
+
+	[...]
+	strcpy(firstname, username);
+	[...]
+}
+
+
+int main(int argc, char **argv) {
+	[...]
+	handleData(argv[1], argv[2]);
+}
+```
+
+The second argument of the program is copied into a stack buffer `firstname` of 64 byte size.
+After this buffer `firstname`, an important variable called `isAdmin` is located. 
 
 
 ## Normal behaviour

@@ -1,8 +1,15 @@
-# Introduction to memory layout advanced
+# Introduction to memory layout - advanced
+
+## Introduction
 
 In this challenge, we have a program which prints the address of various variables
 to stdout. Using `readelf`, we will reverse in which ELF sections and segments
 these variables are stored.
+
+## Goal
+
+- Learn more about memory layout and ELF
+- Get a feeling of useful Linux tools
 
 ## Source
 

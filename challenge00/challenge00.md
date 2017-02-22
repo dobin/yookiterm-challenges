@@ -44,7 +44,7 @@ You can compile it by calling `make` in the folder `~/challenges/challenge00`
 The command "file" can be used to get generic information about the executable:
 
 ```sh
-~/challenges/challenge0# file challenge0          
+~/challenges/challenge00# file challenge0          
 challenge0: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=a8dae60baebe49945ea443d4cc4198b946da27fc, not stripped
 ```
 
@@ -63,7 +63,7 @@ the program on disk.
 
 Type `readelf -l challenge0`
 ```sh
-~/challenges/challenge0# readelf -l ./challenge0
+~/challenges/challenge00# readelf -l ./challenge0
 
 Elf file type is EXEC (Executable file)
 Entry point 0x8048340
@@ -100,7 +100,7 @@ Program Headers:
 
 Try `objdump -d` to decompile the program:
 ```sh
-~/challenges/challenge0# objdump -d challenge0
+~/challenges/challenge00# objdump -d challenge0
 challenge0:     file format elf32-i386
 
 Disassembly of section .init:
@@ -222,7 +222,7 @@ Disassembly of section .plt.got:
 Let's debug the binary using gdb
 
 ```sh
-~/challenges/challenge0# gdb -q ./challenge0
+~/challenges/challenge00# gdb -q ./challenge0
 Reading symbols from ./challenge0...(no debugging symbols found)...done.
 gdb-peda$ run test
 Starting program: /root/challenges/challenge00/challenge0 test

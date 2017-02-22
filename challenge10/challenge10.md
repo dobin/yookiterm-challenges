@@ -79,9 +79,8 @@ The vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
-	int isAdmin = 0;
-	char firstname[64];
-
+    int isAdmin = 0;
+    char name[64]; // should be enough for all usernames
 	[...]
 	strcpy(firstname, username);
 	[...]
@@ -90,12 +89,12 @@ void handleData(char *username, char *password) {
 
 int main(int argc, char **argv) {
 	[...]
-	handleData(argv[1], argv[2]);
+    sprintf(name, "%s-%s", "cmd", username);
 }
 ```
 
-The second argument of the program is copied into a stack buffer `firstname` of 64 byte size.
-After this buffer `firstname`, an important variable called `isAdmin` is located. 
+The second argument of the program is copied into a stack buffer `name` of 64 byte size.
+After this buffer `name`, an important variable called `isAdmin` is located.
 
 
 ## Normal behaviour

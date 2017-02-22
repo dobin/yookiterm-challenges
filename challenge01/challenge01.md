@@ -39,7 +39,7 @@ You can compile it by calling `make` in the folder `~/challenges/challenge01`
 If we execute the program, we get the following output:
 
 ```sh
-root@hlUbuntu32:~/challenges/challenge1# ./challenge1
+root@hlUbuntu32:~/challenges/challenge01# ./challenge1
 Global variable:        0x0x804a020
 Global static variable: 0x0x8048540
 Stack variable:         0x0x8048550
@@ -51,7 +51,7 @@ Heap variable:          0x0x8960008
 
 Lets print all sections and segments of the ELF binary:
 ```sh
-root@hlUbuntu32:~/challenges/challenge1# readelf -l -S challenge0
+root@hlUbuntu32:~/challenges/challenge01# readelf -l -S challenge0
 There are 31 section headers, starting at offset 0x1854:
 
 Section Headers:
@@ -133,7 +133,7 @@ The file offset of `.data` is "0x1018". We can dump it with a tool like `hexdump
 using the `s` parameter to skip the same amount of bytes as the offset specifies:
 
 ```sh
-root@hlUbuntu32:~/challenges/challenge1# hexdump -C -s 0x1018 -n 32 challenge1
+root@hlUbuntu32:~/challenges/challenge01# hexdump -C -s 0x1018 -n 32 challenge1
 00001018  00 00 00 00 00 00 00 00  47 6c 6f 62 61 6c 56 61  |........GlobalVa|
 00001028  72 00 47 43 43 3a 20 28  55 62 75 6e 74 75 20 35  |r.GCC: (Ubuntu 5|
 ```

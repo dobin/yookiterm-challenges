@@ -1,8 +1,8 @@
-# Development of a remote buffer overflow exploit - 64 bit with ASLR
+# Simple remote buffer overflow exploit - ASLR/DEP/64bit
 
 ## Introduction
 
-We will create a functional exploit for a 64 bit program with a stack overflow vulnerability and enabled ASLR.
+We will create a functional exploit for a 64 bit program with a stack overflow vulnerability and enabled ASLR and DEP.
 This includes finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
 python program.
 
@@ -11,7 +11,7 @@ We will use `system()` in LIBC by implementing the ret2plt / ret2libc exploit te
 
 ## Goal
 
-* Implement a fully working exploit for x64 + ASLR by using ret2plt (ret2libc)
+* Implement a fully working exploit for x64 + ASLR + DEP by using ret2plt (ret2libc)
 * Get our static and dynamic analysis skills to the next level
 
 ## Vulnerability

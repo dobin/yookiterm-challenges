@@ -1,0 +1,11 @@
+{
+	"Id": "16",
+	"ContainerBaseName": "hlUbuntu64",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title": "Remote buffer overflow with ROP - DEP/64bit",
+	"Description": "How to create a contemporary remote buffer overflow exploit, ROP",
+
+	"TextFilename": "challenge16.md",
+	"Active": true
+}

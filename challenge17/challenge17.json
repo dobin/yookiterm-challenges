@@ -1,0 +1,11 @@
+{
+	"Id": "17",
+	"ContainerBaseName": "hlUbuntu64",
+	"ContainerHostAlias": "ubuntuaslr",
+
+	"Title": "emote buffer overflow with ROP - DEP/ASLR/64bit",
+	"Description": "How to create a contemporary remote buffer overflow exploit, ROP",
+
+	"TextFilename": "challenge17.md",
+	"Active": true
+}

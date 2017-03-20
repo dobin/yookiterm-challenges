@@ -4,7 +4,8 @@
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Stack canary brute force",
-	"Description": "How to brute force the stack canary in a remote server",
+	"Description": "Bypass stack canary by brute force it because of fork() server",
+	"DocType": "writeup",
 
 	"TextFilename": "challenge14.md",
 	"Active": true

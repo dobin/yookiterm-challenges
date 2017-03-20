@@ -4,7 +4,8 @@
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Simple remote buffer overflow exploit - ASLR/DEP/64bit",
-	"Description": "How to create a contemporary remote buffer overflow exploit, simple ret2plt",
+	"Description": "Remote buffer overflow using ret2plt / ret2libc",
+	"DocType": "writeup",
 
 	"TextFilename": "challenge15.md",
 	"Active": true

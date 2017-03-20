@@ -3,8 +3,9 @@
 	"ContainerBaseName": "hlUbuntu64",
 	"ContainerHostAlias": "ubuntuaslr",
 
-	"Title": "emote buffer overflow with ROP - DEP/ASLR/64bit",
-	"Description": "How to create a contemporary remote buffer overflow exploit, ROP",
+	"Title": "Remote buffer overflow with ROP - DEP/ASLR/64bit",
+	"Description": "Remote ROP buffer overflow with dup() and exec(), simple and advanced",
+    "DocType": "writeup",
 
 	"TextFilename": "challenge17.md",
 	"Active": true

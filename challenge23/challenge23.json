@@ -1,0 +1,11 @@
+{
+	"Id": "23",
+	"ContainerBaseName":"hlUbuntu32",
+	"ContainerHostAlias": "ubuntuarm",
+
+	"Title": "Azeria Labs Tutorial for 32 Bit ARM - Exploiting",
+	"Description": "Create a simple buffer overflow on ARM",
+
+	"TextFilename": "challenge23.md",
+	"Active": true
+}

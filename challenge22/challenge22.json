@@ -1,0 +1,11 @@
+{
+	"Id": "22",
+	"ContainerBaseName":"hlUbuntu32",
+	"ContainerHostAlias": "ubuntuarm",
+
+	"Title": "Azeria Labs Tutorial for 32 Bit ARM Shellcode",
+	"Description": "Create a simple shellcode on ARM",
+
+	"TextFilename": "challenge22.md",
+	"Active": true
+}

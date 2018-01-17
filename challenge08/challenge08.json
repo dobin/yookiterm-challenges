@@ -3,7 +3,7 @@
 	"ContainerBaseName":"hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"C buffer analysis",
+	"Title":"C buffer analysis - with debugging",
 	"Description": "Analysis of out-of-bound read with gdb",
 	"DocType": "writeup",
 

@@ -1,4 +1,4 @@
-# C buffer analysis
+# C buffer analysis - with debugging
 
 ## Introduction
 

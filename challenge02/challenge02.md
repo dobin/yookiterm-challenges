@@ -1,4 +1,4 @@
-# Introduction to C buffers
+# C buffer analysis - simple
 
 ## Introduction
 

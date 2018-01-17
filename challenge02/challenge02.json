@@ -3,7 +3,7 @@
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"Introduction to C buffers",
+	"Title":"C buffer analysis - simple",
 	"Description": "Analyze C buffers and other data structures",
 	"DocType": "writeup",
 

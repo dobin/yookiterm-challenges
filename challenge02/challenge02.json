@@ -1,0 +1,12 @@
+{
+	"Id": "2",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Introduction to C buffers",
+	"Description": "Analyze C buffers and other data structures",
+	"DocType": "writeup",
+
+	"TextFilename": "challenge03.md",
+	"Active": true
+}

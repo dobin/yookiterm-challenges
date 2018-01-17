@@ -22,7 +22,7 @@ There are four relevant files:
 * print3.asm
 * shellcodetest.c
 
-You can compile it by calling `make` in the folder `~/challenges/challenge00`.
+You can compile it by calling `make` in the folder `~/challenges/challenge03`.
 But steps to manually compile it are written below.
 
 

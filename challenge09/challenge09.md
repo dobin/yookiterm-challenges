@@ -1,9 +1,10 @@
-# Simple Buffer overflow
+# Simple Buffer overflow - Change local variable
 
 ## Intro
 
 We will perform a simple buffer overflow on a binary. This overflow
-will change the function flow, which enables us to gain "admin" privileges.
+will change a sensitive variable, and based on this the function flow,
+which enables us to gain "admin" privileges.
 
 
 ## Goal

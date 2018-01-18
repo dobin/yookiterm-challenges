@@ -1,0 +1,12 @@
+{
+	"Id": "10",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Simple Buffer overflow - RCE",
+	"Description": "Overwrite local variables on the stack to bypass authentication by changing execution flow",
+	"DocType": "writeup",
+
+	"TextFilename": "challenge10.md",
+	"Active": true
+}

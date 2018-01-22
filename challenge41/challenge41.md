@@ -1,7 +1,12 @@
-# Azeria: Introduction To Writing ARM Shellcode
+# Azeria Labs: Introduction To Writing ARM Shellcode
 
-This is based on: https://azeria-labs.com/writing-arm-shellcode/
+This is based on: https://azeria-labs.com/writing-arm-shellcode/.
 This is the 32 bit Version.
+
+Working directory is:
+```
+~/challenges/challenge41
+```
 
 ## Understanding System Functions
 
@@ -43,7 +48,7 @@ Dump of assembler code for function write:
 
 And to re-write it in our own shellcode:
 ```
-root@hlUbuntu32:~/challenges/challenge20# cat write.s
+root@hlUbuntu32:~/challenges/challenge41# cat write.s
 .data
 string: .asciz "Azeria Labs\n"  @ .asciz adds a null-byte to the end of the string
 after_string:
@@ -68,7 +73,7 @@ addr_of_string: .word string
 
 Lets execute it:
 ```
-root@hlUbuntu32:~/challenges/challenge20# ./write
+root@hlUbuntu32:~/challenges/challenge41# ./write
 Azeria Labs
 ```
 
@@ -95,7 +100,7 @@ _start:
 Lets execute it:
 
 ```
-root@hlUbuntu32:~/challenges/challenge20# ./execve1
+root@hlUbuntu32:~/challenges/challenge41# ./execve1
 #
 ```
 
@@ -127,7 +132,7 @@ _start:
 
 Test it:
 ```
-root@hlUbuntu32:~/challenges/challenge20# ./execve2
+root@hlUbuntu32:~/challenges/challenge41# ./execve2
 #
 ```
 

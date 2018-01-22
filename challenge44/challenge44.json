@@ -1,0 +1,11 @@
+{
+	"Id": "44",
+	"ContainerBaseName":"hlUbuntu32",
+	"ContainerHostAlias": "ubuntuarm",
+
+	"Title": "Azeria Labs: Process Memory And Memory Corruptions",
+	"Description": "Source code and writeup",
+
+	"TextFilename": "challenge44.md",
+	"Active": false,
+}

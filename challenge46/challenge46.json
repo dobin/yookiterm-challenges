@@ -1,0 +1,11 @@
+{
+	"Id": "46",
+	"ContainerBaseName":"hlUbuntu32",
+	"ContainerHostAlias": "ubuntuarm",
+
+	"Title": "Azeria Labs: Stack Overflow Challenges",
+	"Description": "Source code and writeup",
+
+	"TextFilename": "challenge46.md",
+	"Active": false,
+}

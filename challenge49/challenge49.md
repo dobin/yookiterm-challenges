@@ -6,9 +6,6 @@ We use an AARCH64 ARM machine (virt-2.8 QEMU 2.8 ARM Virtual Machine).
 This tutorial is based on the awesome Azeria Labs ARM tutorial: https://azeria-labs.com/writing-arm-shellcode/
 
 
-##
-
-
 # Exploit
 
 ## Call convention

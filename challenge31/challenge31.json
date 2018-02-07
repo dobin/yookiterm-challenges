@@ -3,7 +3,7 @@
 	"ContainerBaseName":"hlUbuntu64",
 	"ContainerHostAlias": "ubuntuaslr",
 
-	"Title": "Heap use-after-free analysis",
+	"Title": "Heap use-after-free analysis - noteheap",
 	"Description": "Analyse a simple use-after-free bug in noteheap",
 
 	"TextFilename": "challenge31.md",

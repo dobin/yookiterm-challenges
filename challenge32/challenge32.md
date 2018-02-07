@@ -13,8 +13,8 @@ The following tools will be used:
 
 All Linux terminal and GDB commands are preceeded by `$` and `#`, respectively.
 
-The Movie-DB binary is located in `~/challenges/challenge32/source/` and can be compiled by typing `make`.
-The exploit is located in `~/challenges/challenge32/exploit/`.
+* The Movie-DB binary is located in `~/challenges/challenge32/source/` and can be compiled by typing `make`.
+* The exploit is located in `~/challenges/challenge32/exploit/`.
 
 ## Getting Started
 In this challenge we are given a binary `moviedb` and the goal is to read the contents of the file `flag.txt`.
@@ -43,6 +43,8 @@ RELRO     : Partial
 * `RELRO`: The dynamic linker will resolve calls to imported libraries when the function is called for the first time (instead of doing it while loading the program).
 
 More detailed information can be found [here](http://blog.siphos.be/2011/07/high-level-explanation-on-some-binary-executable-security/).
+
+## Optional: Make it running (reversing)
 
 Before reverse engineering a program it is often a good idea to first fool around with
 the program to obtain a feel for what the program does and how it works. However, when we run the program it immediately exits with the following error message:
@@ -75,12 +77,58 @@ This is our own welcome message
 5) Exit
 >
 ```
+
+## Usage
+
+It seems to be some kind of movie database, where movie titles can be added, removed, edited and printed.
+
+```
+root@hlUbuntu64:~/challenges/challenge32/source# ./moviedb
+*************************************************************
+*** Welcome to Movie Database 2000. It still lacks        ***
+*** some features like persistency but hey, at least it's ***
+*** safe =)                                               ***
+*************************************************************
+1) Add Movie
+2) Remove Movie
+3) Edit Movie
+4) Print Movies
+5) Exit
+> 1
+Name: Hackers
+Description: Crime Film
+Year: 1995
+Duration: 107
+1) Add Movie
+2) Remove Movie
+3) Edit Movie
+4) Print Movies
+5) Exit
+> 4
+
+--- Available Movies ---
+
+Name: Hackers
+Description: Crime Film
+Publishing year: 1995
+Duration: 107 minutes
+
+------------------------
+
+1) Add Movie
+2) Remove Movie
+3) Edit Movie
+4) Print Movies
+5) Exit
+> 5
+Bye Bye
+```
+
 After playing around with it the time is ripe to take a look at the source code (or reverse engineer the binary) and
 find vulnerabilities.
 
-## Reversing the Binary
-
 ## Vulnerabilities
+
 At this point you should have a good understanding of how the program is implemented and we are ready to look at the
 vulnerabilities (this is a pwning challenge after all).
 

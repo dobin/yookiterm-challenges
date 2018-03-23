@@ -156,4 +156,5 @@ Seems like the value `0xf7fcb3dc` is located on the stack, right after the array
 ## Questions
 
 * What was the error of the programmer?
-* If we would print array[6], which value would appear?
+* If we would instead of `array[5]` print `array[6]`, which value would appear?
+  * Note: If you want to test your assumption, make sure to execute the binary in gdb. GDB- and non-GDB execution have a small difference in the stack layout.

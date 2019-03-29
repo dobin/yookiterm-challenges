@@ -1,7 +1,7 @@
 {
 	"Id": "1",
 	"ContainerBaseName": "hlUbuntu32",
-	"ContainerHostAlias": "ubuntuaslr",
+	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Introduction to memory layout - advanced",
 	"Description": "Research on where the different types of variables are stored in an ELF file",

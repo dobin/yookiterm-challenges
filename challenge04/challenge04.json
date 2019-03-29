@@ -1,0 +1,12 @@
+{
+	"Id": "3",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Introduction to hex numbers, code and GDB",
+	"Description": "Learn about registers, little endianness, memory with GDB",
+	"DocType": "writeup",
+
+	"TextFilename": "challenge04.md",
+	"Active": true
+}

@@ -39,13 +39,10 @@ Number at index 5: 0xf7fcb3dc
 ```
 
 The value at index 4 is as expected 0x5. But the value at index 5 seems to be arbitrary or
-random. Index 5 is also the 6th entry of the array with size 5. Letrs try to identify
-what this value `0xf7fcb3dc` depicts.
-
+random. Index 5 is also the 6th entry of the array with size 5. Lets try to identify
+where this value `0xf7fcb3dc` comes from.
 
 ## Debugging
-
-
 
 Lets debug the binary. Start gdb, and disas the `main` function:
 
@@ -134,14 +131,16 @@ Legend: code, data, rodata, value
 Breakpoint 1, 0x0804845f in main ()
 ```
 
-We stopped execution before the printf() executed. Lets examine the stack:
-
+We stopped execution before the printf() executed. Lets examine the stack.
+We use the command `x/32x $esp`. The command is called `x`, for `eXamine`. The
+`/32x $esp` means we want to print 32 hex values (of default size), starting from
+the address stored in register `esp`:
 ```
 gdb-peda$ x/32x $esp
 0xffffd630:     0x08048529      0xf7fcb3dc      0x00000000      0xf7e3132a
 0xffffd640:     0x00000001      0x00000000      0xf7e47a30      0x00000001
 0xffffd650:     0x00000002      0x00000003      0x00000004      0x00000005
-0xffffd660:     0xf7fcb3dc      0xffffd680      0x00000000      0xf7e31637
+0xffffd660:   ->0xf7fcb3dc      0xffffd680      0x00000000      0xf7e31637
 0xffffd670:     0xf7fcb000      0xf7fcb000      0x00000000      0xf7e31637
 0xffffd680:     0x00000001      0xffffd714      0xffffd71c      0x00000000
 0xffffd690:     0x00000000      0x00000000      0xf7fcb000      0xf7ffdc04
@@ -150,7 +149,11 @@ gdb-peda$
 ```
 
 Seems like the value `0xf7fcb3dc` is located on the stack, right after the array
-(fourth line, first entry).
+(fourth line, first entry, at address 0xffffd660). Above it are the other values of the array;
+0x01, 0x02, 0x03, 0x04, 0x05. Note that while the stack grows down, buffers
+or arrays on the stack still grow upwards (towards higher addresses).
+Printing values from memory will also print from increasing memory addresses, but
+higher addresses will come later, and therefore futher down in the text output.
 
 
 ## Questions
@@ -158,3 +161,4 @@ Seems like the value `0xf7fcb3dc` is located on the stack, right after the array
 * What was the error of the programmer?
 * If we would instead of `array[5]` print `array[6]`, which value would appear?
   * Note: If you want to test your assumption, make sure to execute the binary in gdb. GDB- and non-GDB execution have a small difference in the stack layout.
+* What is the base/starting address of the array `array`? Is it the same like the first array element?

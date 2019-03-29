@@ -25,7 +25,7 @@ There are also prepared exploits for the program running in gdb, and without gdb
 
 File: `~/challenges/challenge11/challenge11.c`
 
-```c
+```
 #include <stdio.h>
 #include <stdlib.h>
 #include <crypt.h>

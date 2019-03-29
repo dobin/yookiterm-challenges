@@ -5,7 +5,8 @@
 We will perform a simple buffer overflow on a binary. This overflow
 will change the function flow, which enables us to gain "admin" privileges.
 
-We do this by overwriting SIP with the address of `handleIsAdmin()` function.
+We do this by overwriting SIP (stored instruction pointer) on the stack
+with the address of the `handleIsAdmin()` function.
 
 ## Goal
 

@@ -51,7 +51,7 @@ Heap variable:          0x0x8960008
 
 Lets print all sections and segments of the ELF binary:
 ```sh
-root@hlUbuntu32:~/challenges/challenge01# readelf -l -S challenge0
+root@hlUbuntu32:~/challenges/challenge01# readelf -l -S challenge1
 There are 31 section headers, starting at offset 0x1854:
 
 Section Headers:

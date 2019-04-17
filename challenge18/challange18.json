@@ -1,0 +1,12 @@
+{
+	"Id": "18",
+	"ContainerBaseName": "hlUbuntu64",
+	"ContainerHostAlias": "ubuntuaslr",
+
+	"Title": "GOT/PLT Overwrite Example",
+	"Description": "Overwrite a GOT.PLT entry to gain code execution in ASLR situations",
+  "DocType": "writeup",
+
+	"TextFilename": "challenge18.md",
+	"Active": true
+}

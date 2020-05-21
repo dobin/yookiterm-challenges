@@ -1,0 +1,11 @@
+{
+	"Id": "33",
+	"ContainerBaseName":"hlUbuntu64",
+	"ContainerHostAlias": "ubuntuaslr",
+
+	"Title": "Heap Exploit - REST UAF",
+	"Description": "A Use-After-Free vulnerability in a REST API",
+
+	"TextFilename": "challenge33.md",
+	"Active": true
+}

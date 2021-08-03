@@ -25,10 +25,10 @@ int main(int argc, char **argv) {
 	char *localStackVar = "StackVar";
 	char *heapVar = malloc(16);
 
-	printf("Global variable:        0x%p\n", globalVariable);
-	printf("Global static variable: 0x%p\n", globalStaticVariable);
-	printf("Stack variable:         0x%p\n", localStackVar);
-	printf("Heap variable:          0x%p\n", heapVar);
+	printf("Global variable:        %p\n", globalVariable);
+	printf("Global static variable: %p\n", globalStaticVariable);
+	printf("Stack variable:         %p\n", localStackVar);
+	printf("Heap variable:          %p\n", heapVar);
 }
 ```
 
@@ -40,10 +40,10 @@ If we execute the program, we get the following output:
 
 ```sh
 root@hlUbuntu32:~/challenges/challenge01# ./challenge1
-Global variable:        0x0x804a020
-Global static variable: 0x0x8048540
-Stack variable:         0x0x8048550
-Heap variable:          0x0x8960008
+Global variable:        0x804a020
+Global static variable: 0x8048540
+Stack variable:         0x8048550
+Heap variable:          0x8960008
 ```
 
 

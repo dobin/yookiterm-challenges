@@ -1,0 +1,12 @@
+{
+	"Id": "4",
+	"ContainerBaseName": "hlUbuntu32",
+	"ContainerHostAlias": "ubuntunoaslr",
+
+	"Title":"Insecure Coding",
+	"Description": "Some vulnerable examples",
+	"DocType": "writeup",
+
+	"TextFilename": "challenge05.md",
+	"Active": true
+}

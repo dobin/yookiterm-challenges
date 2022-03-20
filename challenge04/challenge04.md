@@ -358,13 +358,10 @@ Dump of assembler code for function _start:
    0x080480a2 <+34>:    mov    $0x0,%ebx
    0x080480a7 <+39>:    int    $0x80
 End of assembler dump.
-(gdb) i r eax, ebx
-Invalid register `eax,'
 (gdb) i r eax ebx
 eax            0x1464c45        21384261
 ebx            0x41424344       1094861636
 (gdb) ni
-
 Program received signal SIGSEGV, Segmentation fault.
 0x0804809b in _start ()
 ```

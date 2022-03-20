@@ -1,4 +1,4 @@
-# Simple Buffer overflow - redirect execution flow
+# Overwrite stored instruction pointer on the stack to bypass authentication
 
 ## Intro
 

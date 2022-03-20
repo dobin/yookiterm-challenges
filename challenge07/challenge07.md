@@ -152,11 +152,11 @@ Dump of assembler code for function functionAdvanced:
 It is called like this in `main()`:
 
 ```
-0x08048475 <+52>:    push   DWORD PTR [ebp-0x14]                               
-0x08048478 <+55>:    push   DWORD PTR [ebp-0x18]                               
-0x0804847b <+58>:    call   0x8048425 <functionAdvanced>                       
-0x08048480 <+63>:    add    esp,0x10                                           
-0x08048483 <+66>:    mov    DWORD PTR [ebp-0xc],eax                            
+0x08048475 <+52>:    push   DWORD PTR [ebp-0x14]
+0x08048478 <+55>:    push   DWORD PTR [ebp-0x18]
+0x0804847b <+58>:    call   0x8048425 <functionAdvanced>
+0x08048480 <+63>:    add    esp,0x10
+0x08048483 <+66>:    mov    DWORD PTR [ebp-0xc],eax
 ```
 
 The arguments are pushed on the stack before the `call`. They get cleaned up

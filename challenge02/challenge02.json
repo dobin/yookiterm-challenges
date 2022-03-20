@@ -3,8 +3,8 @@
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"C buffer analysis - simple",
-	"Description": "Analyze C buffers and other data structures",
+	"Title":"Introduction to C buffers and other data structures",
+	"Description": "Reverse C memory addresses of variables",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge02.md",

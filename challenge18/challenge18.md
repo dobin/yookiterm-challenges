@@ -225,7 +225,7 @@ to RIP, but luckily GDB already prints the two destination addresses at the back
 `0x601020` and `0x601018`.
 
 Lets have a look whats there. Not that we just want to access the value at that
-memory location, as this is what gets jumped to.  
+memory location, as this is what gets jumped to.
 
 ```
 gdb-peda$ x/1xg 0x601020

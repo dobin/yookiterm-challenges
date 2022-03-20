@@ -3,8 +3,8 @@
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"Simple Buffer overflow - variable overwrite",
-	"Description": "Overwrite local variables on the stack to bypass authentication (no exploit)",
+	"Title":"Simple buffer overflow - local variable overwrite",
+	"Description": "Modify an important local variables on the stack to bypass authentication (no exploit)",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge09.md",

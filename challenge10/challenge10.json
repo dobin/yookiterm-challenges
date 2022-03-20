@@ -3,8 +3,8 @@
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"Simple Buffer overflow - RCE",
-	"Description": "Overwrite local variables on the stack to bypass authentication by changing execution flow",
+	"Title":"Simple buffer overflow - control flow reroute",
+	"Description": "Overwrite stored instruction pointer on the stack to bypass authentication",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge10.md",

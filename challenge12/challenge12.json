@@ -4,7 +4,7 @@
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Development of a buffer overflow exploit - 64 bit",
-	"Description": "How to create a simple buffer overflow exploit",
+	"Description": "How to create a simple buffer overflow exploit + pwntools",
 	"DocType": "writeup",
 	
 	"TextFilename": "challenge12.md",

@@ -82,23 +82,21 @@ The vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
-	[...]
+	...
 	char firstname[64];
-
-	[...]
+	...
 	strcpy(firstname, username);
-	[...]
+	...
 }
 
 
 int main(int argc, char **argv) {
-	[...]
+	...
 	handleData(argv[1], argv[2]);
 }
 ```
 
-The second argument of the program is copied into a stack buffer of 64 byte size.
-
+The first command line argument argument of the program is copied into a stack buffer of 64 byte size.
 
 
 ## Analysis
@@ -107,7 +105,6 @@ The second argument of the program is copied into a stack buffer of 64 byte size
 $ file challenge11
 vulnerable: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=f6b1aab172bde7f561e30ef84f253da4a081d8d7, not stripped
 ```
-
 
 
 ## Normal behaviour
@@ -210,8 +207,8 @@ Dump of assembler code for function handleData:
    0x08048622 <+101>:	call   0x8048420 <printf@plt>
    0x08048627 <+106>:	add    esp,0x10
    0x0804862a <+109>:	nop
-   0x0804862b <+110>:	leave  
-   0x0804862c <+111>:	ret    
+   0x0804862b <+110>:	leave
+   0x0804862c <+111>:	ret
 End of assembler dump.
 ```
 

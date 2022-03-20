@@ -274,8 +274,8 @@ Dump of assembler code for function readStrInput:
    0x0000000000400b05 <+157>:	mov    eax,0x0
    0x0000000000400b0a <+162>:	call   0x400860 <dprintf@plt>
    0x0000000000400b0f <+167>:	nop
-   0x0000000000400b10 <+168>:	leave  
-   0x0000000000400b11 <+169>:	ret    
+   0x0000000000400b10 <+168>:	leave
+   0x0000000000400b11 <+169>:	ret
 End of assembler dump.
 gdb-peda$ b *readStrInput+131
 Breakpoint 1 at 0x400aeb
@@ -390,7 +390,7 @@ Lets double check it with a gadget:
 ```
 gdb-peda$ x/2i 0x00007ffff7a0e000+0x000000000003a718
    0x7ffff7a48718 <mblen+104>:	pop    rax
-   0x7ffff7a48719 <mblen+105>:	ret   
+   0x7ffff7a48719 <mblen+105>:	ret
 ```
 
 Seems alright!

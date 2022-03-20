@@ -1,4 +1,4 @@
-# Simple Buffer overflow - Change local variable
+# Simple Buffer overflow - local variable overwrite
 
 ## Intro
 

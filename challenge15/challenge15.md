@@ -76,7 +76,7 @@ command. But we could continue it with `c`.
 ## Find offset
 
 As first step, we can create a peda pattern, which makes it easier for us to identify
-the offset to SIP. It should be bigger that the destination buffer (256 bytes in our case).  
+the offset to SIP. It should be bigger that the destination buffer (256 bytes in our case).
 ```
 gdb-peda$ pattern create 300
 'AAA%AAsAABAA$AAnAACAA-AA(AADAA;AA)AAEAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AALAAhAA7AAMAAiAA8AANAAjAA9AAOAAkAAPAAlAAQAAmAARAAoAASAApAATAAqAAUAArAAVAAtAAWAAuAAXAAvAAYAAwAAZAAxAAyAAzA%%A%sA%BA%$A%nA%CA%-A%(A%DA%;A%)A%EA%aA%0A%FA%bA%1A%GA%cA%2A%HA%dA%3A%IA%eA%4A%JA%fA%5A%KA%gA%6A%'

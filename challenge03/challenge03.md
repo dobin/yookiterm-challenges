@@ -56,14 +56,14 @@ int 0x80
 
 Compile it:
 ```
-$ nasm -f elf print.asm  
+$ nasm -f elf print.asm
 ```
 
 This should generate an object ELF file with the name `print.o`.
 
 Link it with the linker `ld`:
 ```
-$ ld -m elf_i386 -o print print.o  
+$ ld -m elf_i386 -o print print.o
 ```
 
 This will generate an executable file "print". Note that we link it as x32, because the source assembler code is in x32. Alternatively just type `make print`.
@@ -72,7 +72,7 @@ Try it:
 ```
 $ ./print
 Hi there
-$  
+$
 ```
 
 It looks like our code is working.

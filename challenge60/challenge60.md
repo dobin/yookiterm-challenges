@@ -1,7 +1,7 @@
 # Linux Hardening Analysis
 
 This challenge checks some common Linux memory-corruption hardening
-features. 
+features.
 
 ## ASLR
 

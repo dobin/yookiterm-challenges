@@ -3,13 +3,13 @@
 ## Intro
 
 We will exploit a vulnerability in a REST API web server.
-The actual web server is based on Mongoose HTTP server. 
+The actual web server is based on Mongoose HTTP server.
 You can imagine that this code represents the web server of a vacuum robot.
 The actual REST API is not very usefull for a web application, as it lacks
 many features (checking the password, handling the session id, etc). This just
 for the sake of simplicity.
 
-We have the following REST api: 
+We have the following REST api:
   * /login
   * /logout
   * /ping
@@ -17,7 +17,7 @@ We have the following REST api:
 
 ## Files
 
-The web server consists of three files: 
+The web server consists of three files:
 * `webserver.c`: setting up callback and webserver. Doesnt interest us
 * `http.c`: the main REST API
 * `mongoose.c`: the Mongoose OS/Library. Doesnt interest us
@@ -33,7 +33,7 @@ The makefile is able to create the following files:
 
 ### REST: /login
 
-This function will allocate a `struct t_authenticated` structure via `malloc()`. 
+This function will allocate a `struct t_authenticated` structure via `malloc()`.
 The global variable `Authenticated` is set to point to this struct.
 
 Also, the function will return a random session id in the HTTP response (not really
@@ -58,7 +58,7 @@ void rest_login(struct mg_connection *c, struct http_message *hm) {
 }
 ```
 
-The relevant data structures: 
+The relevant data structures:
 ```
 // An authenticated user
 struct t_authenticated {
@@ -74,7 +74,7 @@ struct t_authenticated *Authenticated;
 
 ### REST: /logout
 
-It will call `Authenticated->logout_handler()`, and then 
+It will call `Authenticated->logout_handler()`, and then
 `free()` the `struct t_authenticated` struct referenced in the global var `Authenticated`.
 
 ```
@@ -118,8 +118,8 @@ void rest_ping(struct mg_connection *c, struct http_message *hm) {
 
 ### Use after free
 
-`/logout` will `free()` the global variable `Authenticated`, but does not check 
-if it is already free'd. It can therefore free it multiple times. 
+`/logout` will `free()` the global variable `Authenticated`, but does not check
+if it is already free'd. It can therefore free it multiple times.
 
 ### Information disclosure
 
@@ -178,10 +178,10 @@ Logout
 Segmentation fault (core dumped)
 ```
 
-Note that the output of the web server cannot be seen by the attacker. It is only 
-for the purpose of making writing the exploit easier (not having to use GDB so much). 
+Note that the output of the web server cannot be seen by the attacker. It is only
+for the purpose of making writing the exploit easier (not having to use GDB so much).
 
-Lets check if it really crashes when trying to call the address stored in 
+Lets check if it really crashes when trying to call the address stored in
 `Authenticated->logout_handler`:
 ```
 Program received signal SIGSEGV, Segmentation fault.
@@ -196,7 +196,7 @@ Program received signal SIGSEGV, Segmentation fault.
 Lets check what `/login` really returns:
 
 ```
-$ wget localhost:8000/login 
+$ wget localhost:8000/login
 $ hexdump -C login
 00000000  4c 6f 67 69 6e 0d 0a 00  0a 00 00 00 00 00 00 00  |Login...........|
 00000010  ff ff ff ff 00 00 00 00  50_d9_ff_ff_ff_7f 00 00  |........P.......|
@@ -215,7 +215,7 @@ r12            0x401de0	4201952
 r13            0x7fffffffdec0	140737488346816
 ```
 
-The HTTP answer of the call to `/login` will contain the information from the 
+The HTTP answer of the call to `/login` will contain the information from the
 variable `response`. It contains stack pointer (indicated by `0x7fffffff????` and
 addresses of code (`0x40????`))
 
@@ -228,7 +228,7 @@ addresses of code (`0x40????`))
 
 ## Finding the UAF
 
-Compile it with address sanitizer: 
+Compile it with address sanitizer:
 ```
 $ make webserver.sanitizer
 $ ./webserver.sanitizer
@@ -244,7 +244,7 @@ curl localhost:8000/logout  # trigger UAF
 
 You will see the following output:
 ```
-$ ./webserver.sanitizer 
+$ ./webserver.sanitizer
 Start
 
 Login
@@ -313,7 +313,7 @@ previously allocated by thread T0 here:
     #13 0x58448f  (/home/dobin/Development/vulnweb/webserver.sanitizer+0x58448f)
     #14 0x7ffff6c1db96  (/lib/x86_64-linux-gnu/libc.so.6+0x21b96)
 
-SUMMARY: AddressSanitizer: heap-use-after-free (/home/dobin/Development/vulnweb/webserver.sanitizer+0x584018) 
+SUMMARY: AddressSanitizer: heap-use-after-free (/home/dobin/Development/vulnweb/webserver.sanitizer+0x584018)
 Shadow bytes around the buggy address:
   0x0c1a7fff7fb0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
   0x0c1a7fff7fc0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
@@ -328,7 +328,7 @@ Shadow bytes around the buggy address:
   0x0c1a7fff8050: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
 Shadow byte legend (one shadow byte represents 8 application bytes):
   Addressable:           00
-  Partially addressable: 01 02 03 04 05 06 07 
+  Partially addressable: 01 02 03 04 05 06 07
   Heap left redzone:       fa
   Freed heap region:       fd
   Stack left redzone:      f1
@@ -356,7 +356,7 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 ## Follow allocations
 
 ```
-$ ltrace ./webserver |& ./villoc/villoc.py - out.html; 
+$ ltrace ./webserver |& ./villoc/villoc.py - out.html;
 
 # Start
 malloc(8)                                        = 0x55555577b270
@@ -382,7 +382,7 @@ realloc(0x55555577b720, 0)                       = 0
 free(0x55555577b4d0)                             = <void>
 free(0x55555577b390)                             = <void>
 
-# Logout request 
+# Logout request
 calloc(1, 216)                                   = 0x55555577b720
 realloc(0, 1460)                                 = 0x55555577b800
 realloc(0x55555577b800, 84)                      = 0x55555577b800
@@ -400,7 +400,7 @@ realloc(0x55555577b930, 0)                       = 0
 free(0x55555577b860)                             = <void>
 free(0x55555577b720)                             = <void>
 
-# Ping request 
+# Ping request
 calloc(1, 216)                                   = 0x55555577b930
 realloc(0, 1460)                                 = 0x55555577ba10
 realloc(0x55555577ba10, 227)                     = 0x55555577ba10

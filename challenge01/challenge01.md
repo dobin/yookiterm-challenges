@@ -1,4 +1,4 @@
-# Introduction to memory layout - advanced
+# Introduction to memory layout - variable segment analysis
 
 ## Introduction
 

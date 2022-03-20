@@ -1,4 +1,4 @@
-# Introduction to memory layout - basic
+# Introduction to memory layout - analysis tools
 
 ## Introduction
 
@@ -44,7 +44,7 @@ You can compile it by calling `make` in the folder `~/challenges/challenge00`
 The command "file" can be used to get generic information about the executable:
 
 ```sh
-~/challenges/challenge00# file challenge0          
+~/challenges/challenge00# file challenge0
 challenge0: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=a8dae60baebe49945ea443d4cc4198b946da27fc, not stripped
 ```
 
@@ -84,14 +84,14 @@ Program Headers:
 
  Section to Segment mapping:
   Segment Sections...
-   00     
+   00
    01     .interp
    02     .interp .note.ABI-tag .note.gnu.build-id .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rel.dyn .rel.plt .init .plt .plt.got .text .fini .rodata .eh_frame_hdr .eh_frame
    03     .init_array .fini_array .jcr .dynamic .got .got.plt .data .bss
    04     .dynamic
    05     .note.ABI-tag .note.gnu.build-id
    06     .eh_frame_hdr
-   07     
+   07
    08     .init_array .fini_array .jcr .dynamic .got
 ```
 
@@ -116,7 +116,7 @@ Disassembly of section .init:
  80482e5:       e8 46 00 00 00          call   8048330 <__libc_start_main@plt+0x10>
  80482ea:       83 c4 08                add    $0x8,%esp
  80482ed:       5b                      pop    %ebx
- 80482ee:       c3                      ret    
+ 80482ee:       c3                      ret
 
 Disassembly of section .plt:
 
@@ -163,7 +163,7 @@ Disassembly of section .plt.got:
   8048356:       56                      push   %esi
   8048357:       68 3b 84 04 08          push   $0x804843b
   804835c:       e8 bf ff ff ff          call   8048320 <__libc_start_main@plt>
-  8048361:       f4                      hlt    
+  8048361:       f4                      hlt
   8048362:       66 90                   xchg   %ax,%ax
   8048364:       66 90                   xchg   %ax,%ax
   8048366:       66 90                   xchg   %ax,%ax
@@ -205,9 +205,9 @@ Disassembly of section .plt.got:
  8048489:       83 c4 10                add    $0x10,%esp
  804848c:       b8 00 00 00 00          mov    $0x0,%eax
  8048491:       8b 4d fc                mov    -0x4(%ebp),%ecx
- 8048494:       c9                      leave  
+ 8048494:       c9                      leave
  8048495:       8d 61 fc                lea    -0x4(%ecx),%esp
- 8048498:       c3                      ret    
+ 8048498:       c3                      ret
  8048499:       66 90                   xchg   %ax,%ax
  804849b:       66 90                   xchg   %ax,%ax
  804849d:       66 90                   xchg   %ax,%ax
@@ -263,9 +263,9 @@ Dump of assembler code for function main:
    0x08048489 <+78>:    add    esp,0x10
    0x0804848c <+81>:    mov    eax,0x0
    0x08048491 <+86>:    mov    ecx,DWORD PTR [ebp-0x4]
-   0x08048494 <+89>:    leave  
+   0x08048494 <+89>:    leave
    0x08048495 <+90>:    lea    esp,[ecx-0x4]
-   0x08048498 <+93>:    ret    
+   0x08048498 <+93>:    ret
 End of assembler dump.
 ```
 

@@ -9,20 +9,22 @@ python program.
 
 ## Goal
 
-* Implement a fully working exploit for x64
-* Get our static and dynamic analysis skills to the next level
-* Introducing pwntools
+* Implement a fully working exploit for x64 bit architecture with GDB and simple tools
+* Write the same exploit again, but with pwntools
+
+The following exploits are available: 
+* [challenge12-exploit-skel.py](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12-exploit-skel.py): a prepared exploit, missing offset and address
+* [challenge12-exploit-gdb.py](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12-exploit-gdb.py): skel with data used in this writeup. Which may work
+*  [challenge12-exploit-pwn.py](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12-exploit-pwn.py): pwntools exploit
 
 
-## Source
+## Challenge Source
 
-This is the same as challenge 11, but in 64 bit.
+This is the same as challenge11, but in 64 bit.
 
 You can compile it by calling `make` in the folder `~/challenges/challenge12`
 
-
-## Analysis
-
+Analysis:
 ```
 root@hlUbuntu64:~/challenges/challenge12# file challenge12
 challenge12: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=9397ca5655aeb327386bb0d572717f9906978301, not stripped
@@ -30,6 +32,8 @@ challenge12: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically li
 
 
 ## Vulnerability
+
+Source: [challenge12.c](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12.c)
 
 Reminder: the vulnerability lies here:
 
@@ -221,11 +225,8 @@ sys.stdout.write(exploit)
 And try it:
 
 ```sh
-root@hlUbuntu64:~/challenges/challenge12# gdb -q challenge12
-Reading symbols from challenge12...(no debugging symbols found)...done.
 (gdb) run `python ./challenge12-exploit-gdb.py` bbbb
 Starting program: /root/challenges/challenge12/challenge12 `python ./challenge12-exploit-gdb.py` bbbb
-Hello cmd-�������������������������������������1�H�ѝ��Ќ��H��ST_�RWT^�;AAAAAAAAAAAAAAAAAAAAR����.
 You are admin!
 isAdmin: 0x41414141
 process 364 is executing new program: /bin/dash

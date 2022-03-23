@@ -23,56 +23,7 @@ There are also prepared exploits for the program running in gdb, and without gdb
 
 ## Source
 
-File: `~/challenges/challenge11/challenge11.c`
-
-```
-#include <stdio.h>
-#include <stdlib.h>
-#include <crypt.h>
-#include <string.h>
-
-// hash of: "ourteacheristehbest"
-const char *adminHash = "$6$saaaaalty$cjw9qyAKmchl7kQMJxE5c1mHN0cXxfQNjs4EhcyULLndQR1wXslGCaZrJj5xRRBeflfvmpoIVv6Vs7ZOQwhcx.";
-
-
-int checkPassword(char *password) {
-	char *hash;
-
-	// $6$ is SHA256
-	hash = crypt(password, "$6$saaaaalty");
-
-	if (strcmp(hash, adminHash) == 0) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-
-void handleData(char *username, char *password) {
-	int isAdmin = 0;
-	char firstname[64];
-
-	isAdmin = checkPassword(password);
-	strcpy(firstname, username);
-
-	if(isAdmin > 0) {
-		printf("You ARE admin!\nBe the force with you.\n");
-	} else {
-		printf("You are not admin.\nLame.\n");
-	}
-}
-
-
-int main(int argc, char **argv) {
-	if (argc != 3) {
-		printf("Call: %s <name> <password>\n", argv[0]);
-		exit(0);
-	}
-
-	handleData(argv[1], argv[2]);
-}
-```
+Source: [challenge12.c](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge11/challenge11.c)
 
 You can compile it by calling `make` in the folder `~/challenges/challenge11`
 

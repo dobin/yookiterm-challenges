@@ -4,7 +4,7 @@
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Introduction to memory layout - analysis tools",
-	"Description": "Static and dynamic analysis of an ELF binary with Linux command line tools",
+	"Description": "Static and dynamic analysis of an ELF binary with Linux command line tools and GDB",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge00.md",

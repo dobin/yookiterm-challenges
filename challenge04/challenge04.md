@@ -1,372 +1,359 @@
-# Introduction to hex numbers, code and GDB
+# Shellcode Development
 
 ## Introduction
 
-We will compile some assembler code to see the relationship between
-hex and decimal numbers, registers and memory.
-
-As there is no interactive assembler, we will compile the assembler code into a
-executable. By loading it into a debugger (GDB), we can single-step every
-instruction and its behaviour.
-
-A nice side effect is that we see GDB in action, which we will use
-a lot later on.
+The shellcode is a small piece of code used as the payload in the exploitation of a software vulnerability. It is called "shellcode" because it typically starts a command shell from which the attacker can control the compromised machine, but any piece of code that performs a similar task can be called shellcode. In this challenge we will create a simple shellcode and test it.
 
 
-## Files
+## Goal
 
-Source directory: `~/challenges/challenge04/`
-
-There is one relevant file:
-* intro.asm
+- Learn more about shellcode creation.
+- How to create a shellcode from assembler
+- How to test a shellcode
 
 
 ## Source
 
-File  `~/challenges/challenge04/intro.asm`:
-```
-$ cat intro.asm
-section .data
-msg db 'AABBCCDD'
+Source directory: `~/challenges/challenge04/`
 
+There are four relevant files:
+* print.asm
+* print2.asm
+* print3.asm
+* shellcodetest.c
+
+You can compile it by calling `make` in the folder `~/challenges/challenge04`.
+But steps to manually compile it are written below.
+
+
+## Step 1: A simple asssembler program
+
+We have a simple assembler program, which should print the message "Hi there" on the console:
+```asm
+$ cat print.asm
+section .data
+msg db 'Hi there',0xa
 
 section .text
 global _start
 _start:
 
-mov eax, 10
-mov ah, 0x1
-add eax, 0x10
+; write (int fd, char *msg, unsigned int len);
+mov eax, 4
+mov ebx, 1
+mov ecx, msg
+mov edx, 9
+int 0x80
 
-mov eax, 0x11223344
-
-mov ebx, 0x8048001
-mov eax, [ebx]
-
-mov ebx, 0x41424344
-mov eax, [ebx]
+; exit (int ret)
+mov eax, 1
+mov ebx, 0
+int 0x80
 ```
 
 ### Generate executable
 
 Compile it:
 ```
-$ nasm -f elf intro.asm
+$ nasm -f elf print.asm
 ```
 
-This should generate an object ELF file with the name `intro.o`.
+This should generate an object ELF file with the name `print.o`.
 
 Link it with the linker `ld`:
 ```
-$ ld -m elf_i386 -o intro intro.o
+$ ld -m elf_i386 -o print print.o
 ```
 
-This will generate an executable file "intro". Note that we link it as x32, because the source assembler code is in x32. Alternatively just type `make intro`.
+This will generate an executable file "print". Note that we link it as x32, because the source assembler code is in x32. Alternatively just type `make print`.
 
-## Load the program
-
-Lets use `gdb` to load the program. We will stop the execution before
-the first relevant assembler instruction.
-
-
-Start `gdb` with `intro` executable. The `-q` parameter just omits some
-irrelevant messages on startup.
+Try it:
 ```
-root@hlUbuntu32:~/challenges/challenge04# gdb -q ./intro
-Reading symbols from ./intro...(no debugging symbols found)...done.
+$ ./print
+Hi there
+$
 ```
 
-Lets set a breakpoint at the label `_start`:
+It looks like our code is working.
+
+### Disassembly
+
+We can decompile the generated ELF binary, to check the assembler source code again. Note that the initial program was written in Intel syntax, but objdump will use AT&T syntax.
+
 ```
-(gdb) b *_start
-Breakpoint 1 at 0x8048080
+~/challenges/challenge04$ objdump -d print
+
+print:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+08049000 <_start>:
+ 8049000:       b8 04 00 00 00          mov    $0x4,%eax
+ 8049005:       bb 01 00 00 00          mov    $0x1,%ebx
+ 804900a:       b9 00 a0 04 08          mov    $0x804a000,%ecx
+ 804900f:       ba 09 00 00 00          mov    $0x9,%edx
+ 8049014:       cd 80                   int    $0x80
+ 8049016:       b8 01 00 00 00          mov    $0x1,%eax
+ 804901b:       bb 00 00 00 00          mov    $0x0,%ebx
+ 8049020:       cd 80                   int    $0x80
 ```
 
-Lets start the program. Execution will be stopped when it reaches the breakpoint
-we have set.
-```
-(gdb) run
-Starting program: /root/challenges/challenge04/intro
+### Create shellcode
 
-Breakpoint 1, 0x08048080 in _start ()
-(gdb) where
-#0  0x08048080 in _start ()
-(gdb) disas
+Extract byte-shellcode out of your executable using objdump output
+```
+$ objdump -d print | grep "^ " \
+ | cut -d$'\t' -f 2 | tr '\n' ' ' | sed -e 's/ *$//' \
+ | sed -e 's/ \+/\\x/g' | awk '{print "\\x"$0}'
+
+\xb8\x04\x00\x00\x00\xbb\x01\x00\x00\x00\xb9\x00\xa0\x04\x08\xba\x09\x00\x00\x00\xcd\x80\xb8\x01\x00\x00\x00\xbb\x00\x00\x00\x00\xcd\x80
+```
+
+The command line above will extract the byte sequence of the program. Sadly we have a lot of 0 bytes `\x00` in the shellcode. We also have a static reference.
+
+We have to remove the 0 bytes, and the static reference, as 0 bytes are considered as string termination, and should not appear in bytecode.
+
+
+## Step 2: Remove null-bytes from bytecode
+
+Now we will convert the existing print.asm source code to a shellcode which does
+not contain 0-bytes. For this we strip out assembler instructions which inherently
+use 0-bytes, and exchange them with equivalent functions without 0-bytes.
+
+For example we'll exchange `mov eax, 4` with `xor eax, eax` followed by `mov al, 4`.
+
+`print2.asm`:
+```
+section .data
+msg db 'Hi there',0xa
+
+section .text
+global _start
+_start:
+
+xor eax,eax
+xor ebx,ebx
+xor ecx,ecx
+xor edx,edx
+
+mov al, 0x4
+mov bl, 0x1
+mov ecx, msg
+mov dl, 0x8
+int 0x80
+
+mov al, 0x1
+xor ebx,ebx
+int 0x80
+```
+
+Compile and link it:
+```
+$ nasm -f elf print2.asm
+$ ld -m elf_i386 -o print2 print2.o
+```
+
+or build it via `make print2`.
+
+Run it:
+```
+$ ./print2
+Hi there
+```
+
+Seems it's still working. But are the 0 bytes removed? Lets check:
+```
+~/challenges/challenge04$ objdump -d print2
+
+print2:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+08049000 <_start>:
+ 8049000:       31 c0                   xor    %eax,%eax
+ 8049002:       31 db                   xor    %ebx,%ebx
+ 8049004:       31 c9                   xor    %ecx,%ecx
+ 8049006:       31 d2                   xor    %edx,%edx
+ 8049008:       b0 04                   mov    $0x4,%al
+ 804900a:       b3 01                   mov    $0x1,%bl
+ 804900c:       b9 00 a0 04 08          mov    $0x804a000,%ecx
+ 8049011:       b2 08                   mov    $0x8,%dl
+ 8049013:       cd 80                   int    $0x80
+ 8049015:       b0 01                   mov    $0x1,%al
+ 8049017:       31 db                   xor    %ebx,%ebx
+ 8049019:       cd 80                   int    $0x80
+```
+
+Awesome, no more null bytes! But we still have a problem with the hard-coded address $0x804909c (this causes problems in a real shellcode).
+
+
+## Step 3: Remove References
+
+We need to remove the reference to the data section. For this, we just push the bytes of the message 'hi there' on the stack, and reference that string relative to the stack pointer.
+
+
+### Convert string to number
+
+We will `push` the bytes of the string onto the stack. For this we wil first get
+the hexadecimal representation of the string. Then we will convert it to two 32-bit
+(4-bytes) little endian numbers.
+
+
+Create BYTES of message "hi there"
+```
+$ python -c 'print "hi there"' | hexdump -C -v
+00000000 68 69 20 74 68 65 72 65 0a |hi there.|
+```
+
+And convert it to little endian:
+```
+little endian: 68 65 72 65 --> 65 72 65 68
+little endian: 68 69 20 74 --> 74 20 69 68
+```
+
+### Write new ASM sourcecode
+
+Create new ASM file with built-in message 'hi there'
+```
+$ cat print3.asm
+section .data
+
+section .text
+global _start
+_start:
+
+xor eax,eax
+xor ebx,ebx
+xor ecx,ecx
+xor edx,edx
+
+mov al, 0x4
+mov bl, 0x1
+mov dl, 0x8
+push 0x65726568
+push 0x74206948
+mov ecx, esp
+int 0x80
+
+mov al, 0x1
+xor ebx,ebx
+int 0x80
+```
+
+
+
+### Create new executable
+
+Compile and link it:
+
+```
+$ nasm -f elf print3.asm
+$ ld -o print3 -m elf_i386 print3.o
+```
+
+or `make print3`
+
+Try it:
+```
+$ ./print3
+Hi there
+```
+
+### how does it work?
+
+Note that the parameter for the write() system call before the 0x80 interrupt
+is just a copy of ESP. Because we pushed the two 32-bit integer onto the stack
+(which represent our text), ESP is pointing to our generated string.
+
+```sh
+~/challenges/challenge04$ objdump -d print2
+
+print2:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+08049000 <_start>:
+ 8049000:       31 c0                   xor    %eax,%eax
+ 8049002:       31 db                   xor    %ebx,%ebx
+ 8049004:       31 c9                   xor    %ecx,%ecx
+ 8049006:       31 d2                   xor    %edx,%edx
+ 8049008:       b0 04                   mov    $0x4,%al
+ 804900a:       b3 01                   mov    $0x1,%bl
+ 804900c:       b9 00 a0 04 08          mov    $0x804a000,%ecx
+ 8049011:       b2 08                   mov    $0x8,%dl
+ 8049013:       cd 80                   int    $0x80
+ 8049015:       b0 01                   mov    $0x1,%al
+ 8049017:       31 db                   xor    %ebx,%ebx
+ 8049019:       cd 80                   int    $0x80
+~/challenges/challenge04$ gdb -q print3
+Reading symbols from print3...
+(No debugging symbols found in print3)
+(gdb) disas _start
 Dump of assembler code for function _start:
-=> 0x08048080 <+0>:     mov    $0xa,%eax
-   0x08048085 <+5>:     mov    $0x1,%ah
-   0x08048087 <+7>:     add    $0x10,%eax
-   0x0804808a <+10>:    mov    $0x11223344,%eax
-   0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-   0x08048096 <+22>:    mov    $0x41424344,%ebx
-   0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
+   0x08049000 <+0>:     xor    %eax,%eax
+   0x08049002 <+2>:     xor    %ebx,%ebx
+   0x08049004 <+4>:     xor    %ecx,%ecx
+   0x08049006 <+6>:     xor    %edx,%edx
+   0x08049008 <+8>:     mov    $0x4,%al
+   0x0804900a <+10>:    mov    $0x1,%bl
+   0x0804900c <+12>:    mov    $0x8,%dl
+   0x0804900e <+14>:    push   $0x65726568
+   0x08049013 <+19>:    push   $0x74206948
+   0x08049018 <+24>:    mov    %esp,%ecx
+   0x0804901a <+26>:    int    $0x80
+   0x0804901c <+28>:    mov    $0x1,%al
+   0x0804901e <+30>:    xor    %ebx,%ebx
+   0x08049020 <+32>:    int    $0x80
 End of assembler dump.
+(gdb) b *_start+26
+Breakpoint 1 at 0x804901a
+(gdb) r
+Starting program: /root/challenges/challenge04/print3
+
+Breakpoint 1, 0x0804901a in _start ()
+(gdb) i r esp
+esp            0xffffdd98          0xffffdd98
+(gdb) x/1s $esp
+0xffffdd98:     "Hi there\001"
 ```
 
-With the command `disas`, we can not only see the compiled assembler code,
-but also where we are currently in its execution, the line is indicated
-by `=>`. Note that it will point at the *next* instruction to be executed,
-not the one which is already executed (exactly like EIP/RIP/PC).
+## Create shellcode
 
-We will now execute each instruction after the other with the GDB command
-`ni` (next instruction), and observe its impact.
-
-## Command 1
-
-Lets execute the first instruction: `mov $0xa,%eax`.
-
+Dump your shellcode from print3:
 ```
-(gdb) ni
-(gdb) disas
-Dump of assembler code for function _start:
-   0x08048080 <+0>:     mov    $0xa,%eax
-=> 0x08048085 <+5>:     mov    $0x1,%ah
-   0x08048087 <+7>:     add    $0x10,%eax
-   0x0804808a <+10>:    mov    $0x11223344,%eax
-   0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-   0x08048096 <+22>:    mov    $0x41424344,%ebx
-   0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
-End of assembler dump.
-(gdb) i r eax
-eax            0xa      10
+$ objdump -d print3 | grep "^ " | cut -d$'\t' -f 2 | tr '\n' ' ' | sed -e 's/ *$//' | sed -e 's/ \+/\\x/g'| awk '{print "\\x"$0}'
+\x31\xc0\x31\xdb\x31\xc9\x31\xd2\xb0\x04\xb3\x01\xb2\x08\x68\x68\x65\x72\x65\x68\x48\x69\x20\x74\x89\xe1\xcd\x80\xb0\x01\x31\xdb\xcd\x80
 ```
 
-We have written the number 0xa, or 10 in decimal, into register `eax`.
+We can now use this bytecode sequence, and use it in our shellcode test program.
 
-## Command 2
+### Test Shellcode with Loader
 
-Lets execute: `mov    $0x1,%ah`
+You can now try the new shellcode in a shellcode loader program
+
+Get print-shellcodetest.c
 ```
-(gdb) ni
-0x08048087 in _start ()
-(gdb) disas
-Dump of assembler code for function _start:
-   0x08048080 <+0>:     mov    $0xa,%eax
-   0x08048085 <+5>:     mov    $0x1,%ah
-=> 0x08048087 <+7>:     add    $0x10,%eax
-   0x0804808a <+10>:    mov    $0x11223344,%eax
-   0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-   0x08048096 <+22>:    mov    $0x41424344,%ebx
-   0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
-End of assembler dump.
-(gdb) i r eax
-eax            0x10a    266
+$ cat shellcodetest.c
+#include <stdio.h>
+#include <string.h>
+
+char *shellcode = "\x31\xc0\x31\xdb\x31\xc9\x31\xd2\xb0\x04\xb3\x01\xb2\x08\x68\x68\x65\x72\x65\x68\x48\x69\x20\x74\x89\xe1\xcd\x80\xb0\x01\x31\xdb\xcd\x80";
+
+int main(void) {
+	( *( void(*)() ) shellcode)();
+}
+$ gcc shellcodetest.c –m32 –z execstack -o shellcodetest
+$ ./shellcodetest
+Hi there
+$
 ```
 
-We have written the number 0x1 into `ah`. This is the "higher" part of `ax`.
-`ax` is the lower 16 bits of `eax`. This doesnt overwrite the 0x1 we have
-written in `eax`, because it is covered by `al`.
+# Things to think about
 
-Remember, `eax` is 32 bit or 4 byte. `ah` is the 3rd byte, while `al` is the 4th.
-`ax` is 16 bit or 2 bytes, or the 2nd half of `eax`.
+* Can you make the shellcode smaller? How small?
+* Instead of using the system call write(), use the system call 11 (0xb), "sys_execve". Start a bash shell instead of printing 'hi there'
+* Can you do this challenge in 64 bit?
 
-One byte is represented by two hex digits. Therefore both `al` and `ah` require
-2 hex digits to describe them each. `eax`, 4 bytes, requires 8 hex digits.
-
-## Command 3
-
-Lets execute: `add    $0x10,%eax`
-
-```
-(gdb) ni
-0x0804808a in _start ()
-(gdb) disas
-Dump of assembler code for function _start:
-   0x08048080 <+0>:     mov    $0xa,%eax
-   0x08048085 <+5>:     mov    $0x1,%ah
-   0x08048087 <+7>:     add    $0x10,%eax
-=> 0x0804808a <+10>:    mov    $0x11223344,%eax
-   0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-   0x08048096 <+22>:    mov    $0x41424344,%ebx
-   0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
-End of assembler dump.
-(gdb) i r eax
-eax            0x11a    282
-```
-
-Calc:
-```
-0x10a + 0x10 = 0x11a
-```
-
-## Command 4
-
-Lets execute: `mov    $0x11223344,%eax`
-```
-(gdb) ni
-0x0804808f in _start ()
-(gdb) disas
-Dump of assembler code for function _start:
-   0x08048080 <+0>:     mov    $0xa,%eax
-   0x08048085 <+5>:     mov    $0x1,%ah
-   0x08048087 <+7>:     add    $0x10,%eax
-   0x0804808a <+10>:    mov    $0x11223344,%eax
-=> 0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-   0x08048096 <+22>:    mov    $0x41424344,%ebx
-   0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
-End of assembler dump.
-(gdb) i r eax ah al
-eax            0x11223344       287454020
-ah             0x33     51
-al             0x44     68
-```
-
-The output of `eax`, `ah` and `al` should be clear.
-
-
-## Command 5
-
-Here we execute two assembly instruction to reach our goal:
-```
-   0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-```
-
-The first will load the address `0x8048001` into `ebx`.
-The second will load the content of that memory address (`0x8048001`) into eax.
-
-```
-(gdb) disas
-Dump of assembler code for function _start:
-   0x08048080 <+0>:     mov    $0xa,%eax
-   0x08048085 <+5>:     mov    $0x1,%ah
-   0x08048087 <+7>:     add    $0x10,%eax
-   0x0804808a <+10>:    mov    $0x11223344,%eax
-=> 0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-   0x08048096 <+22>:    mov    $0x41424344,%ebx
-   0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
-End of assembler dump.
-(gdb) ni
-0x08048094 in _start ()
-(gdb) i r eax ebx
-eax            0x11223344       287454020
-ebx            0x8048001        134512641
-```
-
-`eax` still has the old content, while `ebx` contains the memory address.
-Lets load the data at it:
-
-```
-(gdb) ni
-0x08048096 in _start ()
-(gdb) disas
-Dump of assembler code for function _start:
-   0x08048080 <+0>:     mov    $0xa,%eax
-   0x08048085 <+5>:     mov    $0x1,%ah
-   0x08048087 <+7>:     add    $0x10,%eax
-   0x0804808a <+10>:    mov    $0x11223344,%eax
-   0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-=> 0x08048096 <+22>:    mov    $0x41424344,%ebx
-   0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
-End of assembler dump.
-(gdb) i r eax ebx
-eax            0x1464c45        21384261
-ebx            0x8048001        134512641
-```
-
-It seems the 4 byte (32 bit) value at memory location `0x8048001` is
-`0x1464c45`.
-
-Memory locations are different from registers, as they are 1-byte (8 bit)
-referenced. Lets use GDB to have a look at that memory location in `ebx` again.
-
-
-Lets display it as one Word (32 bit):
-```
-(gdb) x/1wx $ebx
-0x8048001:      0x01464c45
-```
-Same result as in the register `eax`.
-
-Now, lets have a look at 4 bytes:
-```
-(gdb) x/4bx $ebx
-0x8048001:      0x45    0x4c    0x46    0x01
-```
-The order is reversed!
-
-Note that register `eax` is stored as little endian, as we have seen when we
-accessed `al` and `ah`, and also `ax`.
-
-In memory, we can try to display a memory location as a little endian 32 bit
-integer, as we did with the GDB command `x/1wx`. It will automagically convert
-the number at that memory location, as it knows it is a little endian machine.
-
-If we look at the individual bytes though, we see that the number `0x01464c45`
-is actually stored as 4 bytes: `0x45 0x4c 0x46 0x01`. Or in other words, the byte
-at memory location `0x8048001` is `0x45`. The byte at memory location
-`0x8048001 + 1 = 0x8048002` is `0x4c`.
-
-The bytes appear to be a string. Lets have a look at it:
-```
-(gdb) x/1s $ebx
-0x8048001:      "ELF\001\001\001"
-```
-
-It seems to be the string "ELF", followed by three 0x01 bytes.
-
-So we can look at the same memory location, like `0x8048001`, in three ways:
-* First: as a 32-bit little endian integer
-* Second: as 4 independant, individual bytes
-* Third: Interpret these bytes as ASCII, and display it like a string
-
-
-## Command 6
-
-This time, we will do the same as in the previous chapter, but we will access an "invalid"
-memory location, in this case `0x41424344`, and see what happens:
-```
-(gdb) disas
-Dump of assembler code for function _start:
-   0x08048080 <+0>:     mov    $0xa,%eax
-   0x08048085 <+5>:     mov    $0x1,%ah
-   0x08048087 <+7>:     add    $0x10,%eax
-   0x0804808a <+10>:    mov    $0x11223344,%eax
-   0x0804808f <+15>:    mov    $0x8048001,%ebx
-   0x08048094 <+20>:    mov    (%ebx),%eax
-   0x08048096 <+22>:    mov    $0x41424344,%ebx
-=> 0x0804809b <+27>:    mov    (%ebx),%eax
-   0x0804809d <+29>:    mov    $0x1,%eax
-   0x080480a2 <+34>:    mov    $0x0,%ebx
-   0x080480a7 <+39>:    int    $0x80
-End of assembler dump.
-(gdb) i r eax ebx
-eax            0x1464c45        21384261
-ebx            0x41424344       1094861636
-(gdb) ni
-Program received signal SIGSEGV, Segmentation fault.
-0x0804809b in _start ()
-```
-
-The program crashed with the error code "SIGSEGV", Segmentation fault.
-
-This is one of the reasons why the instruction pointer points to the next command:
-We know exactly at which point the program failed.

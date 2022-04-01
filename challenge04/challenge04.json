@@ -3,8 +3,8 @@
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"Introduction to hex numbers, code and GDB",
-	"Description": "Learn about registers, little endianness, memory with GDB",
+	"Title":"Shellcode development",
+	"Description": "Create a basic running shellcode (print to console)",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge04.md",

@@ -180,46 +180,39 @@ advantage that we can exactly see which assembler instruction we currently execu
 ```sh
 (gdb) disass main
 Dump of assembler code for function main:
-=> 0x08049172 <+0>:     lea    0x4(%esp),%ecx
-   0x08049176 <+4>:     and    $0xfffffff0,%esp
-   0x08049179 <+7>:     push   -0x4(%ecx)
-   0x0804917c <+10>:    push   %ebp
-   0x0804917d <+11>:    mov    %esp,%ebp
-   0x0804917f <+13>:    push   %ebx
-   0x08049180 <+14>:    push   %ecx
-   0x08049181 <+15>:    call   0x80490b0 <__x86.get_pc_thunk.bx>
-   0x08049186 <+20>:    add    $0x2e7a,%ebx
-   0x0804918c <+26>:    mov    %ecx,%eax
-   0x0804918e <+28>:    cmpl   $0x1,(%eax)
-   0x08049191 <+31>:    jne    0x80491b5 <main+67>
-   0x08049193 <+33>:    mov    0x4(%eax),%eax
-   0x08049196 <+36>:    mov    (%eax),%eax
-   0x08049198 <+38>:    sub    $0x8,%esp
-   0x0804919b <+41>:    push   %eax
-   0x0804919c <+42>:    lea    -0x1ff8(%ebx),%eax
-   0x080491a2 <+48>:    push   %eax
-   0x080491a3 <+49>:    call   0x8049030 <printf@plt>
-   0x080491a8 <+54>:    add    $0x10,%esp
-   0x080491ab <+57>:    sub    $0xc,%esp
-   0x080491ae <+60>:    push   $0x0
-   0x080491b0 <+62>:    call   0x8049040 <exit@plt>
-   0x080491b5 <+67>:    mov    0x4(%eax),%eax
-   0x080491b8 <+70>:    add    $0x4,%eax
-   0x080491bb <+73>:    mov    (%eax),%eax
-   0x080491bd <+75>:    sub    $0x8,%esp
-   0x080491c0 <+78>:    push   %eax
-   0x080491c1 <+79>:    lea    -0x1fe7(%ebx),%eax
-   0x080491c7 <+85>:    push   %eax
-   0x080491c8 <+86>:    call   0x8049030 <printf@plt>
-   0x080491cd <+91>:    add    $0x10,%esp
-   0x080491d0 <+94>:    mov    $0x0,%eax
-   0x080491d5 <+99>:    lea    -0x8(%ebp),%esp
-   0x080491d8 <+102>:   pop    %ecx
-   0x080491d9 <+103>:   pop    %ebx
-   0x080491da <+104>:   pop    %ebp
-   0x080491db <+105>:   lea    -0x4(%ecx),%esp
-   0x080491de <+108>:   ret
-End of assembler dump.
+=> 0x08049172 <+0>:     lea    ecx,[esp+0x4]
+   0x08049176 <+4>:     and    esp,0xfffffff0
+   0x08049179 <+7>:     push   DWORD PTR [ecx-0x4]
+   0x0804917c <+10>:    push   ebp
+   0x0804917d <+11>:    mov    ebp,esp
+   0x0804917f <+13>:    push   ecx
+   0x08049180 <+14>:    sub    esp,0x4
+   0x08049183 <+17>:    mov    eax,ecx
+   0x08049185 <+19>:    cmp    DWORD PTR [eax],0x1
+   0x08049188 <+22>:    jne    0x80491aa <main+56>
+   0x0804918a <+24>:    mov    eax,DWORD PTR [eax+0x4]
+   0x0804918d <+27>:    mov    eax,DWORD PTR [eax]
+   0x0804918f <+29>:    sub    esp,0x8
+   0x08049192 <+32>:    push   eax
+   0x08049193 <+33>:    push   0x804a008
+   0x08049198 <+38>:    call   0x8049030 <printf@plt>
+   0x0804919d <+43>:    add    esp,0x10
+   0x080491a0 <+46>:    sub    esp,0xc
+   0x080491a3 <+49>:    push   0x0
+   0x080491a5 <+51>:    call   0x8049040 <exit@plt>
+   0x080491aa <+56>:    mov    eax,DWORD PTR [eax+0x4]
+   0x080491ad <+59>:    add    eax,0x4
+   0x080491b0 <+62>:    mov    eax,DWORD PTR [eax]
+   0x080491b2 <+64>:    sub    esp,0x8
+   0x080491b5 <+67>:    push   eax
+   0x080491b6 <+68>:    push   0x804a019
+   0x080491bb <+73>:    call   0x8049030 <printf@plt>
+   0x080491c0 <+78>:    add    esp,0x10
+   0x080491c3 <+81>:    mov    eax,0x0
+   0x080491c8 <+86>:    mov    ecx,DWORD PTR [ebp-0x4]
+   0x080491cb <+89>:    leave
+   0x080491cc <+90>:    lea    esp,[ecx-0x4]
+   0x080491cf <+93>:    ret
 ```
 
 Lets set a breakpoint on the `main` function, and start the program so we have a running process, 

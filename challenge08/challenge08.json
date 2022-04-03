@@ -3,8 +3,8 @@
 	"ContainerBaseName":"hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"C buffer analysis - with debugging",
-	"Description": "Analysis of out-of-bound read with gdb",
+	"Title":"Simple buffer overread",
+	"Description": "Analysis of a memory leak with GDB",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge08.md",

@@ -1,13 +1,13 @@
 {
-	"Id": "7",
+	"Id": "6",
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Function Call Convention in x86 (32bit)",
-	"Description": "Analysis of function calling (gdb static and dynamic analysis)",
+	"Description": "Analysis of function calling convention with GDB",
 	"DocType": "challenge",
 
 
-	"TextFilename": "challenge07.md",
+	"TextFilename": "challenge06.md",
 	"Active": true
 }

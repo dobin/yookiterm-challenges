@@ -7,14 +7,16 @@ The shellcode is a small piece of code used as the payload in the exploitation o
 
 ## Goal
 
-- Learn more about shellcode creation.
-- How to create a shellcode from assembler
-- How to test a shellcode
+- Create a small program in assembly
+- Transform that program into shellcode
+- Update shellcode so it has the properties it requires
+- Test the shellcode
 
 
 ## Source
 
-Source directory: `~/challenges/challenge04/`
+* Source directory: `~/challenges/challenge04/`
+* Source files: [challenge04](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge04)
 
 There are four relevant files:
 * print.asm
@@ -22,7 +24,7 @@ There are four relevant files:
 * print3.asm
 * shellcodetest.c
 
-You can compile it by calling `make` in the folder `~/challenges/challenge04`.
+You can compile it by calling `make` in the folder `~/challenges/challenge04`
 But steps to manually compile it are written below.
 
 
@@ -293,20 +295,20 @@ Reading symbols from print3...
 (No debugging symbols found in print3)
 (gdb) disas _start
 Dump of assembler code for function _start:
-   0x08049000 <+0>:     xor    %eax,%eax
-   0x08049002 <+2>:     xor    %ebx,%ebx
-   0x08049004 <+4>:     xor    %ecx,%ecx
-   0x08049006 <+6>:     xor    %edx,%edx
-   0x08049008 <+8>:     mov    $0x4,%al
-   0x0804900a <+10>:    mov    $0x1,%bl
-   0x0804900c <+12>:    mov    $0x8,%dl
-   0x0804900e <+14>:    push   $0x65726568
-   0x08049013 <+19>:    push   $0x74206948
-   0x08049018 <+24>:    mov    %esp,%ecx
-   0x0804901a <+26>:    int    $0x80
-   0x0804901c <+28>:    mov    $0x1,%al
-   0x0804901e <+30>:    xor    %ebx,%ebx
-   0x08049020 <+32>:    int    $0x80
+   0x08049000 <+0>:     xor    eax,eax
+   0x08049002 <+2>:     xor    ebx,ebx
+   0x08049004 <+4>:     xor    ecx,ecx
+   0x08049006 <+6>:     xor    edx,edx
+   0x08049008 <+8>:     mov    al,0x4
+   0x0804900a <+10>:    mov    bl,0x1
+   0x0804900c <+12>:    mov    dl,0x8
+   0x0804900e <+14>:    push   0x65726568
+   0x08049013 <+19>:    push   0x74206948
+   0x08049018 <+24>:    mov    ecx,esp
+   0x0804901a <+26>:    int    0x80
+   0x0804901c <+28>:    mov    al,0x1
+   0x0804901e <+30>:    xor    ebx,ebx
+   0x08049020 <+32>:    int    0x80
 End of assembler dump.
 (gdb) b *_start+26
 Breakpoint 1 at 0x804901a

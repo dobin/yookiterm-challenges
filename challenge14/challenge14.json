@@ -4,7 +4,7 @@
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Stack canary brute force",
-	"Description": "Bypass stack canary by brute force it because of fork() server",
+	"Description": "Bypass stack canary of a fork() network server by using brute force ",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge14.md",

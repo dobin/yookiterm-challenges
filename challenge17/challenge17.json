@@ -3,7 +3,7 @@
 	"ContainerBaseName": "hlUbuntu64",
 	"ContainerHostAlias": "ubuntuaslr",
 
-	"Title": "Remote buffer overflow with ROP - DEP/ASLR/64bit",
+	"Title": "Remote buffer overflow with ROP (DEP/ASLR/64bit)",
 	"Description": "Remote ROP buffer overflow with dup() and exec(), simple and advanced",
     "DocType": "writeup",
 

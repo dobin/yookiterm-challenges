@@ -205,8 +205,8 @@ the hexadecimal representation of the string. Then we will convert it to two 32-
 
 Create BYTES of message "hi there"
 ```
-$ python -c 'print "hi there"' | hexdump -C -v
-00000000 68 69 20 74 68 65 72 65 0a |hi there.|
+$ perl -e 'print "hi there"' | hexdump -C
+00000000  68 69 20 74 68 65 72 65  |hi there|
 ```
 
 And convert it to little endian:

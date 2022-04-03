@@ -3,7 +3,7 @@
 	"ContainerBaseName": "hlUbuntu32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title": "Development of a buffer overflow exploit - 32 bit",
+	"Title": "Development of a buffer overflow exploit",
 	"Description": "How to create a simple buffer overflow exploit",
 	"DocType": "writeup",
 

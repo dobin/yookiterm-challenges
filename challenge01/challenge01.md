@@ -11,9 +11,10 @@ these variables are stored.
 - Learn more about memory layout and ELF
 - Get a feeling of useful Linux tools
 
+
 ## Source
 
-File: `~/challenges/challenge01/challenge1.c`
+File: `~/challenges/challenge01/challenge01.c`
 ```c
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +53,7 @@ Function:               0x8049172
 
 Lets print all sections and segments of the ELF binary:
 ```sh
-root@hlUbuntu32:~/challenges/challenge01# readelf -l -S challenge1
+root@hlUbuntu32:~/challenges/challenge01# readelf -l -S challenge01
 There are 29 section headers, starting at offset 0x37f4:
 
 Section Headers:

@@ -3,8 +3,8 @@
 	"ContainerBaseName": "hlUbuntu64",
 	"ContainerHostAlias": "ubuntuaslr",
 
-	"Title": "Simple remote buffer overflow exploit - ASLR/DEP/64bit",
-	"Description": "Remote buffer overflow using ret2plt / ret2libc",
+	"Title": "Remote buffer overflow exploit (ASLR/DEP/64bit)",
+	"Description": "Attack a network server by using ret2plt technique ",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge15.md",

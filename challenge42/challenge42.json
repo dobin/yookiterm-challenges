@@ -3,9 +3,9 @@
 	"ContainerBaseName":"hlUbuntu32",
 	"ContainerHostAlias": "ubuntuarm",
 
-	"Title": "Azeria Labs: TCP Bind Shell in Assembly (ARM 32-bit)",
+	"Title": "Azeria Labs: Introduction to Writing ARM Shellcode",
 	"Description": "Source code and writeup",
 
 	"TextFilename": "challenge42.md",
-	"Active": false
+	"Active": true
 }

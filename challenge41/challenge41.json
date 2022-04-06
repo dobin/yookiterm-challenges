@@ -3,8 +3,8 @@
 	"ContainerBaseName":"hlUbuntu32",
 	"ContainerHostAlias": "ubuntuarm",
 
-	"Title": "Azeria Labs: Introduction to Writing ARM Shellcode",
-	"Description": "Source code and writeup",
+	"Title": "Introduction to develop an ARM buffer overflow",
+	"Description": "Create a simple buffer overflow on ARM",
 
 	"TextFilename": "challenge41.md",
 	"Active": true

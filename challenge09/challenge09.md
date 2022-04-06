@@ -101,4 +101,3 @@ at the end.
 
 * What is happening here? Why Are we "admin" if we use a username which is 130 bytes long?
 * Why do we get a segmentation fault if we use a username which is 140 bytes long?
-

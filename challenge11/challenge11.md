@@ -390,10 +390,11 @@ uid=0(root) gid=0(root) groups=0(root)
 #
 ```
 
-It works! The bash has been executed.
+It works! The bash has been executed. Even though the binary does not have the code
+for this functionality, we injected it with our shellcode.
 
 
 ## Things to think about
 
-* Can you create an exploit which works with both, and without GDB?
+* Can you create an exploit which works with both, with- and without GDB?
 * Can you create an exploit where the shellcode is stored in the variable password (argv[2])?

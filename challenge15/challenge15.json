@@ -1,6 +1,6 @@
 {
 	"Id": "15",
-	"ContainerBaseName": "hlUbuntu64",
+	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Remote buffer overflow exploit (ASLR/DEP/64bit)",

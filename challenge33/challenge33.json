@@ -1,6 +1,6 @@
 {
 	"Id": "33",
-	"ContainerBaseName":"hlUbuntu64",
+	"ContainerBaseName":"Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Heap Exploit - REST UAF",

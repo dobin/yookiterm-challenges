@@ -1,6 +1,6 @@
 {
 	"Id": "52",
-	"ContainerBaseName": "hlUbuntu64",
+	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "GOT/PLT Overwrite Example",

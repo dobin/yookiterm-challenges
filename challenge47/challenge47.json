@@ -1,6 +1,6 @@
 {
 	"Id": "47",
-	"ContainerBaseName":"hlUbuntu64",
+	"ContainerBaseName":"Debian64",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "Azeria Labs: Introduction to Writing ARM Shellcode",

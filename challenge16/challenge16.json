@@ -1,6 +1,6 @@
 {
 	"Id": "16",
-	"ContainerBaseName": "hlUbuntu64",
+	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Remote buffer overflow with ROP (DEP/64bit)",

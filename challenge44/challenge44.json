@@ -1,6 +1,6 @@
 {
 	"Id": "44",
-	"ContainerBaseName":"hlUbuntu32",
+	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "Azeria Labs: Process Memory And Memory Corruptions",

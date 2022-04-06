@@ -1,6 +1,6 @@
 {
 	"Id": "2",
-	"ContainerBaseName": "hlUbuntu32",
+	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Introduction to C data structures",

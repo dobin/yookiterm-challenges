@@ -1,6 +1,6 @@
 {
 	"Id": "49",
-	"ContainerBaseName":"hlUbuntu64",
+	"ContainerBaseName":"Debian64",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "ARM64 Introduction",

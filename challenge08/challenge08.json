@@ -1,6 +1,6 @@
 {
 	"Id": "8",
-	"ContainerBaseName":"hlUbuntu32",
+	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Simple buffer overread",

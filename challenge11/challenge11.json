@@ -1,6 +1,6 @@
 {
 	"Id": "11",
-	"ContainerBaseName": "hlUbuntu32",
+	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Development of a buffer overflow exploit",

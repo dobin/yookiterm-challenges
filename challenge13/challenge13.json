@@ -1,6 +1,6 @@
 {
 	"Id": "13",
-	"ContainerBaseName": "hlUbuntu64",
+	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Development of a remote buffer overflow exploit (64bit)",

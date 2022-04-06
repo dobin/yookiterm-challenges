@@ -1,6 +1,6 @@
 {
 	"Id": "60",
-	"ContainerBaseName": "hlUbuntu64",
+	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title":"Linux Hardening Analysis",

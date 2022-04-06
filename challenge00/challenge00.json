@@ -1,6 +1,6 @@
 {
 	"Id": "0",
-	"ContainerBaseName": "hlUbuntu32",
+	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Introduction to memory layout - analysis tools",

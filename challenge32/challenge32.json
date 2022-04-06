@@ -1,6 +1,6 @@
 {
 	"Id": "32",
-	"ContainerBaseName":"hlUbuntu64",
+	"ContainerBaseName":"Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Heap Exploit Writeup - MovieDB",

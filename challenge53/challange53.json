@@ -1,0 +1,12 @@
+{
+	"Id": "53",
+	"ContainerBaseName": "Debian64",
+	"ContainerHostAlias": "ubuntuaslr",
+
+	"Title": "Fuzzing",
+	"Description": "",
+  "DocType": "writeup",
+
+	"TextFilename": "challenge53.md",
+	"Active": true
+}

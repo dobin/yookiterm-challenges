@@ -20,7 +20,7 @@ python program.
 
 You can compile it by calling `make` in the folder `~/challenges/challenge11`
 
-The source is identical with challenge09 and challenge10.
+The source is identical with challenge10.
 
 
 ## Vulnerability
@@ -32,7 +32,7 @@ void handleData(char *username, char *password) {
     int isAdmin = 0;
     char name[128];
     ...
-    strcpy(firstname, username); // strcpy() is unsafe
+    strcpy(name, username); // strcpy() is unsafe
     ...
 }
 

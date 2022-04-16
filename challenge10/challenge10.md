@@ -32,7 +32,7 @@ void handleData(char *username, char *password) {
     int isAdmin = 0;
     char name[128];
     ...
-    strcpy(firstname, username); // strcpy() is unsafe
+    strcpy(name, username); // strcpy() is unsafe
     ...
 }
 

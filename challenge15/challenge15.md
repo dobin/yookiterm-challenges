@@ -1,4 +1,4 @@
-# Simple remote buffer overflow exploit - ASLR/DEP/64bit
+# Remote buffer overflow exploit (ASLR/DEP/64bit)
 
 ## Introduction
 
@@ -9,12 +9,17 @@ python program.
 We will use `system()` in LIBC by implementing the ret2plt / ret2libc exploit technique.
 
 
-## Goal
+## Source
 
-* Implement a fully working exploit for x64 + ASLR + DEP by using ret2plt (ret2libc)
-* Get our static and dynamic analysis skills to the next level
+* Source directory: `~/challenges/challenge15/`
+* Source files: [challenge15](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge15)
 
-## Vulnerability
+You can compile it by calling `make` in the folder `~/challenges/challenge15`
+
+The source is identical to challenge13. A TCP/IP server with a buffer overflow.
+
+
+## 
 
 We have a server which is listening on port 5001. For each connection it will
 fork and execute the following code:

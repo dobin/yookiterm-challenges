@@ -2,18 +2,13 @@
 
 ## Introduction
 
-We will create a functional exploit for a 32 bit program with a stack overflow vulnerability. This includes
-finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
-python program.
+We will create a functional exploit for a 32bit program with a stack overflow vulnerability,
+executing our provided shellcode. We do this by overflowing a buffer into the return
+address (SIP), like in challenge10. But instead of using an existing function, we provide
+our own (shell-) code to execute.
 
 
-## Goal
-
-* Write a buffer whose SIP points to our shellcode
-* Give that buffer to the vulnerable program to execute a shell
-
-
-## Source
+### Source
 
 * Source directory: `~/challenges/challenge11/`
 * Source files: [challenge11](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge11)
@@ -23,13 +18,12 @@ You can compile it by calling `make` in the folder `~/challenges/challenge11`
 The source is identical with challenge10.
 
 
-## Vulnerability
+### Vulnerability
 
 A reminder, the vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
-    int isAdmin = 0;
     char name[128];
     ...
     strcpy(name, username); // strcpy() is unsafe
@@ -44,17 +38,6 @@ int main(int argc, char **argv) {
 The first argument of the program is copied into a stack buffer `name` of 128 byte size.
 
 
-
-## Analysis
-
-```
-$ file challenge11
-vulnerable: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=f6b1aab172bde7f561e30ef84f253da4a081d8d7, not stripped
-```
-
-It is 32 bit. 
-
-
 ## Normal behaviour
 
 Run Programm with normal arguments:
@@ -64,10 +47,17 @@ isAdmin: 0x0
 Not admin.
 ```
 
+We will now update the first argument (here the string `hacker`) and replace it with
+our own exploit string. This exploit string has to be long enough to overwrite the SIP, 
+and at the same time contains our shellcode. To create this, we need to write a small
+python program. 
+
 
 ## The exploit
 
-Read the prepared exploit `challenge11-exploit.py`. 
+To create our buffer overflow string, we will need the help of a small python program.
+
+Read the prepared exploit `challenge11-exploit.py`:
 ```python
 #!/usr/bin/python3
 # Skeleton exploit for challenge11
@@ -326,8 +316,12 @@ As expected: We see the NOP sled, and the shellcode after starting at address `0
 
 ## Test exploit without gdb
 
-Lets test it without gdb:
+To debug it, we need to enable core files first with:
+```
+~/challenges/challenge11$ ulimit -n unlimited
+```
 
+Lets test the exploit without starting it under GDB:
 ```
 ~/challenges/challenge11$ ./challenge11 `python3 ./challenge11-exploit.py` password
 isAdmin: 0x41414141
@@ -337,10 +331,12 @@ Segmentation fault (core dumped)
 Makefile  challenge11  challenge11-exploit.py  challenge11.c  core.173
 ```
 
-Ouch, no shell. We have the analyze the core file which was generated: `core.173`. 
-It contains a copy of the process memory when it crashed.
+Ouch, no shell. GDB changes our stack layout slightly. As the program crashed, and
+we enabled core files, the core dump `core.173` has been created.
 
-```
+We have the analyze the core file which was generated: `core.173`. 
+It contains a copy of the process memory when it crashed.
+```sh
 ~/challenges/challenge11$ gdb -q challenge11 core.173
 Reading symbols from challenge11...
 [New LWP 173]

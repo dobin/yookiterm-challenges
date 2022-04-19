@@ -3,18 +3,11 @@
 ## Intro
 
 We will perform a simple buffer overflow on a binary. This overflow
-will change a sensitive variable, and based on this the function flow,
-which enables us to gain "admin" privileges.
+will change a sensitive local stack variable, which will give us
+virtual "admin" privileges.
 
 
-## Goal
-
-* Understand C arrays by misusing them
-* Get comfortable with gdb
-* Deeper understanding of the stack
-
-
-## Source 
+### Source 
 
 * Source directory: `~/challenges/challenge09/`
 * Source files: [challenge09](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge09)
@@ -22,13 +15,12 @@ which enables us to gain "admin" privileges.
 You can compile it by calling `make` in the folder `~/challenges/challenge09`
 
 
-## Vulnerability
+### Vulnerability
 
 Read the source of `challenge09.c`.
 
 The vulnerability lies here:
-
-```
+```c
 void handleData(char *username, char *password) {
     int isAdmin = 0;
     char name[128];

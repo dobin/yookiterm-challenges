@@ -2,18 +2,12 @@
 
 ## Introduction
 
-We will create a functional exploit for a 64 bit program with a stack overflow vulnerability
-using pwntools. 
+We will create a functional exploit for a64 bit program with a stack overflow vulnerability,
+nearly identical with challenge11. But this time we use pwntools Python library, and GEF
+GDB plugin to make the whole process easier. 
 
 
-## Goal
-
-* Implement a fully working exploit for x64 bit
-* Learn about pwntools
-* Learn about GEF
-
-
-## Challenge Source
+### Source
 
 * Source directory: `~/challenges/challenge12/`
 * Source files: [challenge12](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge12)
@@ -23,13 +17,12 @@ You can compile it by calling `make` in the folder `~/challenges/challenge12`
 The source is similar to challenge10. Same vulnerability, but different input vector.
 
 
-## Vulnerability
+### Vulnerability
 
 Reminder: the vulnerability lies in the function `handleData()`:
 
 ```c
 void handleData(char *username, char *password) {
-    int isAdmin = 0;
     char name[128];
     ...
     strcpy(name, username);
@@ -49,8 +42,8 @@ int main(int argc, char **argv) {
 }
 ```
 
-What has been changed is that the arguments in the previous challenges, are now read from the keyboard. 
-
+What has been changed is that the arguments in the previous challenges are now read from the keyboard. 
+The program does not have any command line arguments:
 ```
 ~/challenges/challenge12$ ./challenge12 
 Username: Test
@@ -97,20 +90,27 @@ This makes exploit development much easier. We need to combine it with something
 still using GDB:
 
 ```python
+io = process("./challenge12")
 gdb.attach(io, 'continue')
 ...
 io.poll(block=True)
 ```
 
-Tmux will be used to show the output of GDB, in the lower half of the terminal. 
+Start a [tmux](https://gist.github.com/MohamedAlaa/2961058) session first by typing `tmux`
+in the terminal. tmux will be used to show the output of GDB, in the lower half of the terminal. 
+The focus, and therefore your keyboard input, will be the lower window automatically - inside
+GDB. To quit, just type `quit` into GDB. Sometimes an additional `ctrl-c` is required.
+
 Lets configure the exploit to overflow with `exploit = b'A' * 156`.
-It will give something like this as output
+
+It will give something like this as output:
 ```
 ~/challenges/challenge12$ python3 challenge12-exploit.py
 [+] Starting local process './challenge12': pid 315
 [*] running in new terminal: ['/usr/bin/gdb', '-q', './challenge12', '315', '-x', '/tmp/pwn9lxo2ph7.gdb']
 [+] Waiting for debugger: Done
 b'You are admin!\n'
+
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -135,15 +135,20 @@ gef➤
 ```
 
 GDB is now using GEF, to provide helpful tools when writing exploits. It will also show information
-like the content of registers on every breakpoint.
+like the content of registers on every breakpoint automatically. This includes the `registers`,
+and where they point to. `code` disassembly, which cannot be performed here (as at 0x41414141 
+there is no code), and `threads` with the status of the program (we only use one thread). 
 
-GDB debugging the program has been executed in the lower tmux window. It crashed with `RIP=0x41414141`. 
-You can look around by using GDB commands. Once you are finished, exit gdb with `ctrl-d` or just `quit`. 
+GDB debugging the program has been executed in the lower tmux window. The top window, above `Legend`,
+is the python script output of `challenge12-exploit.py`. 
+
+At the bottom, you can see it crashed with `RIP=0x41414141` because of a SIGSEGV, a segmentation fault. 
+You can look around by using GDB commands. Once you are finished, exit gdb with `quit` or just `ctrl-d`. 
 
 
 ## Notes on finding the offset for 64 bit
 
-RIP on x64 bit cannot be fully utilized - the top most bytes have to be zero. 
+The 64 bit RIP register on x64 bit cannot be fully utilized - the top most bytes have to be zero. 
 
 This means that if you overflow too much, RIP will be set to some kind of "default" value. It will
 look like this, using `offset=160`:
@@ -177,23 +182,25 @@ $rip   : 0x00000000401265  →  <handleData+109> ret
 gef➤
 ```
 
-While RIP is not set to 0x4141414141, it crashed on the `ret` instruction: A good indicator we 
-overflowed too much. 
+While RIP is not set to `0x4141414141`, it crashed on the `ret` instruction, because the value for
+RIP from the stack is invalid (too large). A good indicator we overflowed too much. 
 
 
 ## Writing the exploit
 
-As before, you require three different things: 
+As before, you required to know three different things: 
 * The offset to RIP
 * The shellcode
 * The location of the shellcode in memory
 
-Use `challenge12-exploit.py` as basis for your exploit. And the knowledge of challenge11 to gather this information, and update the exploit accordingly. 
-
+But now, you also need to write the python exploit itself. Use `challenge12-exploit.py` as basis for your exploit. 
+And the knowledge of challenge11 to gather this information, and update the exploit accordingly. 
+In more or less this order:
 * Update the exploit so you can reliably crash the vulnerable program (should be prepared like this)
-* Make sure you have the right offset to SIP
-* Replace the `exploit` variable with the real exploit as in challenge11 (NOPs, shellcode, garbage, SIP)
+* Make sure you have the right offset to SIP (RIP is a known value)
+* Replace the `exploit` variable with the real exploit pattern as in challenge11 (with NOPs, shellcode, garbage, SIP). Make sure to stay inside the 128 byte buffer
 * Find the address of the exploit in memory
+
 * See if the exploit executed `/bin/dash`
 * If yes, disable debug commands in the exploit, and enjoy your fresh shell
 
@@ -203,11 +210,13 @@ context.arch='amd64'
 shellcode = asm(shellcraft.amd64.sh())
 ```
 
+Use the shellcode in variable `main():username`, NOT `handleData():name` as SIP. The later will sadly not work with the provided shellcode!
+
 Some tipps:
-* `gdb.attach(io, 'continue')` the second argument are GDB commands. Remove the `continue` to interact with GDB on startup. Or add breakpoints like `b *handleData+75`
-* You can re-use the exploit pattern function `make()` from `challenge11-exploit.py`
-* Use the shellcode in variable `main():username`, NOT `handleData():name` as SIP. The later will sadly not work!
-* Use `io.interactive()` instead of `io.poll()` once the shellcode gets executed reliably.
+* `gdb.attach(io, 'continue')` the second argument are GDB commands. Remove the `continue` to interact with GDB on startup. Or add breakpoints like `b *handleData+75` directly
+* You can re-use the exploit pattern function `make()` from `challenge11-exploit.py
+* Use `io.interactive()` instead of `io.poll()` once the shellcode gets executed reliably
+* set breakpoints on the end of handleData() to check if overwritten SIP points to your shellcode
 
 If you have trouble, peek at `challenge12-solution.py`.
 
@@ -258,8 +267,11 @@ $rip   : 0x007ffff7eb2e8e  →  0x5a77fffff0003d48 ("H="?)
 process 1227 is executing new program: /usr/bin/dash
 ```
 
-Pressint `ctrl-c` and then `ctrl-d` will exit GDB, and you can interact with the shell on
-the main script (at `$ `).
+pwntools starts GDB as usual in the bottom half. It executed `/usr/bin/dash/` successfully. 
+Press `ctrl-b <up>` to change into the upper terminal. You can interact with the shell 
+spawned by the shellcode by typing commands (at `$ `).
+
+Press `ctrl-d` to exit the shell, which also closes GDB.
 
 
 To make it easier, just add `NOPTRACE` argument. This will disable `gdb.attach()`:

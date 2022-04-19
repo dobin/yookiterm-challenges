@@ -2,165 +2,67 @@
 
 ## Introduction
 
-We will create a functional exploit for a remote 64 bit program with a stack overflow vulnerability. This includes
-finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
-python program.
-
-## Goal
-
-* Implement a fully working exploit for x64 server program
-* Get our static and dynamic analysis skills to the next level
-
-## Source
-
-```c
-#include <stdio.h>
-#include <stdlib.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <string.h>
-
-// hash of: "ourteacheristehbest"
-const char *adminHash = "$6$saaaaalty$cjw9qyAKmchl7kQMJxE5c1mHN0cXxfQNjs4EhcyULLndQR1wXslGCaZrJj5xRRBeflfvmpoIVv6Vs7ZOQwhcx.";
+We will create a functional exploit for a remote 64bit program with a stack overflow vulnerability - 
+a remote exploit. 
 
 
-int checkPassword(char *password) {
-	char *hash;
-	hash = crypt(password, "$6$saaaaalty");
-	if (strcmp(hash, adminHash) == 0) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
+### Source
+
+* Source directory: `~/challenges/challenge13/`
+* Source files: [challenge13](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge13)
+
+You can compile it by calling `make` in the folder `~/challenges/challenge13`
+
+The source is similar to challenge12. Same vulnerability, but different input vector.
+Instead of giving the vulnerable data via stdin (or previously, command line arguments), we now
+send it via TCP/IP socket.
 
 
-
-void handleData(char *username, char *password) {
-	int isAdmin = 0;
-	char firstname[256];
-
-	isAdmin = checkPassword(password);
-	strcpy(firstname, username);
-
-	if(isAdmin > 0) {
-		printf("You ARE admin!\nBe the force with you.\nisAdmin: 0x%x\n", isAdmin);
-	} else {
-		printf("You are not admin.\nLame.\n");
-	}
-}
-
-void doprocessing (int sock) {
-	char username[1024];
-	char password[1024];
-
-	bzero(username, sizeof(username));
-	bzero(password, sizeof(password));
-
-	printf("Client connected\n");
-
-	int n;
-	n = read(sock, username, 1023);
-	printf("Username: %s\n", username);
-	handleData(username, password);
-}
-
-
-int main( int argc, char *argv[] ) {
-   int sockfd, newsockfd, portno, clilen;
-   char buffer[256];
-   struct sockaddr_in serv_addr, cli_addr;
-   int n, pid;
-
-   /* First call to socket() function */
-   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-   if (sockfd < 0) {
-      perror("ERROR opening socket");
-      exit(1);
-   }
-
-   /* Initialize socket structure */
-   bzero((char *) &serv_addr, sizeof(serv_addr));
-   portno = 5001;
-
-   serv_addr.sin_family = AF_INET;
-   serv_addr.sin_addr.s_addr = INADDR_ANY;
-   serv_addr.sin_port = htons(portno);
-
-   /* Now bind the host address using bind() call.*/
-   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-      perror("ERROR on binding");
-      exit(1);
-   }
-
-   /* Now start listening for the clients, here
-      * process will go in sleep mode and will wait
-      * for the incoming connection
-   */
-
-   listen(sockfd,5);
-   clilen = sizeof(cli_addr);
-
-   while (1) {
-      newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-
-      if (newsockfd < 0) {
-         perror("ERROR on accept");
-         exit(1);
-      }
-      /* Create child process */
-      pid = fork();
-
-      if (pid < 0) {
-         perror("ERROR on fork");
-         exit(1);
-      }
-
-      if (pid == 0) {
-         /* This is the client process */
-         close(sockfd);
-         doprocessing(newsockfd);
-         exit(0);
-      }
-      else {
-         close(newsockfd);
-      }
-
-   } /* end of while */
-}
-```
-
-
-
-## Vulnerability
+### Vulnerability
 
 The vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
-	...
-	char firstname[256];
-	...
-	strcpy(firstname, username);
-	...
+    char name[128];
+    ...
+    strcpy(name, username);
+    ...
 }
 
+void handleClient (int socket) {
+   char username[1024];
+   char password[1024];
 
-void doprocessing (int sock) {
-	char username[1024];
-	...
-	int n;
-	n = read(sock, username, 1024);
-	...
-	handleData(username, password);
+   read(socket, username, 1023);
+   read(socket, password, 1023);
+
+   int ret = handleData(username, password);
+   ...
 }
 ```
 
-The server reads a maximum of 1024 bytes, and copies it into a username buffer
-of size 1024 bytes. It then gives this buffer to the function `handleData` as
-argument `username`, which in turn copies it in a buffer which is only 256 bytes.
+## Usage
 
+The server expects two messages - similar to challenge12, but this time they
+are not read via stdin, but from a TCP/IP socket:
+
+```sh
+$ nc localhost 5001
+Username: test
+Password: test
+Not admin.
+```
+
+But username overflows nevertheless. 
+
+
+## How to interact with server with python pwntools
+
+
+
+
+###########################################
 
 ## Debugging notes
 

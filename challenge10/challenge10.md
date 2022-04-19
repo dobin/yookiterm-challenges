@@ -1,19 +1,14 @@
-# Overwrite stored instruction pointer on the stack to bypass authentication
+# Simple buffer overflow - control flow reroute
 
 ## Intro
 
 We will perform a simple buffer overflow on a binary. This overflow
 will change the function flow, which enables us to gain "admin" privileges.
-
 We do this by overwriting SIP (stored instruction pointer) on the stack
 with the address of the `secret()` function.
 
-## Goal
 
-* Calling a an arbitrary function by creating a buffer overflow and overwriting SIP
-
-
-## Source 
+### Source 
 
 * Source directory: `~/challenges/challenge10/`
 * Source files: [challenge10](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge10)
@@ -23,13 +18,12 @@ You can compile it by calling `make` in the folder `~/challenges/challenge10`
 The source is identical with challenge09.
 
 
-## Vulnerability
+### Vulnerability
 
 A reminder, the vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
-    int isAdmin = 0;
     char name[128];
     ...
     strcpy(name, username); // strcpy() is unsafe

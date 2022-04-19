@@ -1,23 +1,20 @@
-# C buffer analysis - with debugging
+# Simple buffer overread
+
+## Intro
+
+We have a vulnerable program, which allows us to perform out-of-bound reads via
+program arguments.
+
+We will try to leak some memory, and use GDB verify our findings. 
 
 
-## Introduction
+### Source
 
-We have a vulnerable program which allows us to perform out-of-bound reads.
-By debugging and analyzing it we will look at internal stack data of the process by
-supplying adequate program inputs.
-
-
-## Goal
-
-* Understand C arrays by misusing them
-* Get comfortable with GDB
-* Use a memory leak
+* Source directory: `~/challenges/challenge08/`
+* Source files: [challenge08](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge08)
 
 
-## Source
-
-File: `~/challenges/challenge08/challenge08.c`
+File: `challenge08.c`:
 ```c
 void main(int argc, char **argv) {
         if (argc != 2) {
@@ -29,14 +26,26 @@ void main(int argc, char **argv) {
         int idx = atoi(argv[1]);
         printf("Number at index %i: 0x%x\n", idx, array[idx]);
 }
-
 ```
 
 You can compile it by calling `make` in the folder `~/challenges/challenge08`. 
 
+
+### Vulnerability
+
+```c
+        int idx = atoi(argv[1]);
+        printf("Number at index %i: 0x%x\n", idx, array[idx]);
+```
+
+The variable `idx` is untrusted and directly from an attacker. No sanity
+checks are being performed. `idx` can be larger than the maximum size
+of the array it is being used in; `array[4]`.
+
+
 ## Execution
 
-The program allows us to view 32 bit values of the `array[4]` array, by supplying
+The program allows us to view the four 32bit values of the `array[4]` array, by supplying
 the index as the first argument. The array is of length 4, so we can try showing 
 the first and last element:
 
@@ -48,8 +57,7 @@ Number at index 3: 0xdd
 ```
 
 Works as intended. But what if we increase the index even more?
-
-```
+```sh
 ~/challenges/challenge08$ ./challenge08 4
 Number at index 4: 0x4
 ~/challenges/challenge08$ ./challenge08 5

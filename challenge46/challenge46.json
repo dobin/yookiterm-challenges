@@ -1,11 +1,10 @@
 {
-	"Id": "46",
 	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "Azeria Labs: Stack Overflow Challenges",
 	"Description": "Source code and writeup",
+	"TextFilename": "arm",
 
-	"TextFilename": "challenge46.md",
-	"Active": true
+	"Active": false
 }

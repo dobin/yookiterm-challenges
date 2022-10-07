@@ -1,11 +1,10 @@
 {
-	"Id": "32",
 	"ContainerBaseName":"Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Heap Exploit Writeup - MovieDB",
 	"Description": "An intra-chunk heap exploit example",
+	"Chapter": "heap",
 
-	"TextFilename": "challenge32.md",
 	"Active": true
 }

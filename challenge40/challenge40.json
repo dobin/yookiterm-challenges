@@ -1,11 +1,10 @@
 {
-	"Id": "40",
 	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "Introduction to ARM",
 	"Description": "Basics of the ARM architecture",
+	"Chapter": "arm",
 
-	"TextFilename": "challenge41.md",
-	"Active": true
+	"Active": false
 }

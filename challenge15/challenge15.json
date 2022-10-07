@@ -1,12 +1,10 @@
 {
-	"Id": "15",
 	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Remote buffer overflow exploit (ASLR/DEP/64bit)",
 	"Description": "Attack a network server by using ret2plt technique ",
-	"DocType": "writeup",
+	"Chapter": "overflow",
 
-	"TextFilename": "challenge15.md",
 	"Active": true
 }

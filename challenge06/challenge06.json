@@ -1,13 +1,10 @@
 {
-	"Id": "6",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Function Call Convention in x86 (32bit)",
 	"Description": "Analysis of function calling convention with GDB",
-	"DocType": "challenge",
+	"Chapter": "intro",
 
-
-	"TextFilename": "challenge06.md",
 	"Active": true
 }

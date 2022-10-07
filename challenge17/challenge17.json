@@ -1,12 +1,10 @@
 {
-	"Id": "17",
 	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title": "Remote buffer overflow with ROP (DEP/ASLR/64bit)",
 	"Description": "Remote ROP buffer overflow with dup() and exec(), simple and advanced",
-    "DocType": "writeup",
+    "Chapter": "overflow",
 
-	"TextFilename": "challenge17.md",
 	"Active": true
 }

@@ -1,11 +1,10 @@
 {
-	"Id": "41",
 	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "Introduction to develop an ARM buffer overflow",
 	"Description": "Create a simple buffer overflow on ARM",
+	"Chapter": "arm",
 
-	"TextFilename": "challenge41.md",
-	"Active": true
+	"Active": false
 }

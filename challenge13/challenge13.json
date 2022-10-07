@@ -1,12 +1,10 @@
 {
-	"Id": "13",
 	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Development of a remote buffer overflow exploit (64bit)",
 	"Description": "How to create a buffer overflow exploit for a networked server",
-	"DocType": "writeup",
+	"Chapter": "overflow",
 
-	"TextFilename": "challenge13.md",
 	"Active": true
 }

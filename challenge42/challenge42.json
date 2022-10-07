@@ -1,11 +1,10 @@
 {
-	"Id": "42",
 	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "Azeria Labs: Introduction to Writing ARM Shellcode",
 	"Description": "Source code and writeup",
+	"Chapter": "arm",
 
-	"TextFilename": "challenge42.md",
-	"Active": true
+	"Active": false
 }

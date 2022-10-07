@@ -1,12 +1,10 @@
 {
-	"Id": "3",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Introduction to ASM and GDB",
 	"Description": "Learn about writing assembly code and debug it with GDB",
-	"DocType": "writeup",
+	"Chapter": "intro",
 
-	"TextFilename": "challenge03.md",
 	"Active": true
 }

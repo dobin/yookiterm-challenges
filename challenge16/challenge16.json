@@ -1,12 +1,10 @@
 {
-	"Id": "16",
 	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Remote buffer overflow with ROP (DEP/64bit)",
 	"Description": "Remote ROP buffer overflow by mprotect() shellcode",
-    "DocType": "writeup",
+    "Chapter": "overflow",
 
-	"TextFilename": "challenge16.md",
 	"Active": true
 }

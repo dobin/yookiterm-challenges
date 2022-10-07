@@ -1,12 +1,10 @@
 {
-	"Id": "10",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Simple buffer overflow - control flow reroute",
 	"Description": "Overwrite stored instruction pointer on the stack to bypass authentication",
-	"DocType": "writeup",
+	"Chapter": "overflow",
 
-	"TextFilename": "challenge10.md",
 	"Active": true
 }

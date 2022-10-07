@@ -1,12 +1,10 @@
 {
-	"Id": "2",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Introduction to memory layout: C data structures",
 	"Description": "Analyse memory addresses of some C variables",
-	"DocType": "writeup",
+	"Chapter": "intro",
 
-	"TextFilename": "challenge02.md",
 	"Active": true
 }

@@ -1,11 +1,10 @@
 {
-	"Id": "49",
 	"ContainerBaseName":"Debian64",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "ARM64 Introduction",
 	"Description": "Create a simple shellcode on ARM",
+	"Chapter": "arm",
 
-	"TextFilename": "challenge49.md",
-	"Active": true
+	"Active": false
 }

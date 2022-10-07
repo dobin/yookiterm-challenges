@@ -1,11 +1,10 @@
 {
-	"Id": "60",
 	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntuaslr",
 
 	"Title":"Linux Hardening Analysis",
 	"Description": "Check hardening settings of a Linux Distribution",
+	"Chapter": "additional",
 
-	"TextFilename": "challenge60.md",
 	"Active": true
 }

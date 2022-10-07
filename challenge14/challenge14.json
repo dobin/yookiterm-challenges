@@ -1,12 +1,10 @@
 {
-	"Id": "14",
 	"ContainerBaseName": "Debian64",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Stack canary brute force",
 	"Description": "Bypass stack canary of a fork() network server by using brute force ",
-	"DocType": "writeup",
+	"Chapter": "overflow",
 
-	"TextFilename": "challenge14.md",
 	"Active": true
 }

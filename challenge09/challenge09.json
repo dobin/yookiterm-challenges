@@ -1,12 +1,10 @@
 {
-	"Id": "9",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Simple buffer overflow - local variable overwrite",
 	"Description": "Modify an important local variables on the stack to bypass authentication (no exploit)",
-	"DocType": "writeup",
+	"Chapter": "overflow",
 
-	"TextFilename": "challenge09.md",
 	"Active": true
 }

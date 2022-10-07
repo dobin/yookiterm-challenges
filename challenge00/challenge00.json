@@ -1,13 +1,10 @@
 {
-	"Id": "0",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Introduction to memory layout: analysis tools",
 	"Description": "Static and dynamic analysis of an ELF binary with Linux command line tools and GDB",
 	"Chapter": "intro",
-	"DocType": "writeup",
 
-	"TextFilename": "challenge00.md",
 	"Active": true
 }

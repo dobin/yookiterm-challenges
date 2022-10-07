@@ -1,11 +1,10 @@
 {
-	"Id": "44",
 	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntuarm",
 
 	"Title": "Azeria Labs: Process Memory And Memory Corruptions",
 	"Description": "Source code and writeup",
+	"Chapter": "arm",
 
-	"TextFilename": "challenge44.md",
-	"Active": true
+	"Active": false
 }

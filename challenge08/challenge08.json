@@ -1,12 +1,10 @@
 {
-	"Id": "8",
 	"ContainerBaseName":"Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
-	"Title":"Simple buffer overread",
+	"Title": "Simple buffer overread",
 	"Description": "Analysis of a memory leak with GDB",
-	"DocType": "writeup",
+	"Chapter": "intro",
 
-	"TextFilename": "challenge08.md",
 	"Active": true
 }

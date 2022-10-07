@@ -1,12 +1,10 @@
 {
-	"Id": "4",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Shellcode development",
 	"Description": "Create a basic running shellcode in assembly",
-	"DocType": "writeup",
+	"Chapter": "intro",
 
-	"TextFilename": "challenge04.md",
 	"Active": true
 }

@@ -1,12 +1,10 @@
 {
-	"Id": "11",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Development of a buffer overflow exploit",
 	"Description": "How to create a simple buffer overflow exploit",
-	"DocType": "writeup",
+	"Chapter": "overflow",
 
-	"TextFilename": "challenge11.md",
 	"Active": true
 }

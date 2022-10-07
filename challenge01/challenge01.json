@@ -1,13 +1,10 @@
 {
-	"Id": "1",
 	"ContainerBaseName": "Debian32",
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title": "Introduction to memory layout: C variable analysis",
 	"Description": "Analyse where the different types of C variable types are stored in an ELF file",
-	"DocType": "challenge",
 	"Chapter": "intro",
 
-	"TextFilename": "challenge01.md",
 	"Active": true
 }

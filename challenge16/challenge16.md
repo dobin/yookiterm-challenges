@@ -52,7 +52,7 @@ Data: Test
 ```
 
 
-## Exploit
+## Exploit Plan
 
 Because DEP is enabled, we have to mark the memory area of the stack executable. This is
 possible by using the systemcall `mprotect`:

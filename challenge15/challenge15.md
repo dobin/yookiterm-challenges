@@ -23,7 +23,7 @@ to solve.
 
 The vulnerability lies here:
 
-```
+```c
 void handleData(char *username, char *password) {
     char name[256];
     ...

@@ -4,7 +4,7 @@
 	"ContainerHostAlias": "ubuntunoaslr",
 
 	"Title":"Shellcode development",
-	"Description": "Create a basic running shellcode (print to console)",
+	"Description": "Create a basic running shellcode in assembly",
 	"DocType": "writeup",
 
 	"TextFilename": "challenge04.md",

@@ -1,15 +1,16 @@
-# Introduction to C data structures
+# Introduction to memory layout: C data structures
 
 ## Introduction
 
-We will talk about C buffers and other structures here.
+In this challenge we will analyze some data structures in a C program.
+By looking at memory pointers, we will be able to deduce how C organizes
+some variables in memory.
 
 
 ## Goal
 
-- Learn more about C and its data structures
-- Learn how data structres are implemented in memory
-- Learn a bit about C pointers
+* Learn a bit about C pointers
+* Learn more about C data structures
 
 
 ## Source
@@ -20,8 +21,10 @@ Source: [challenge2.c](https://github.com/dobin/yookiterm-challenges-files/blob/
 
 You can compile it by calling `make` in the folder `~/challenges/challenge02`.
 
+
 ## Stack
 
+Lets analyze some stack variables:
 ```
 ~/challenges/challenge02$ ./challenge02 array
 unsigned int stackTop = 0xaabbccdd;
@@ -36,7 +39,19 @@ charArray[4]  @ 0xffffdd0c: 0xdd (part of stackTop)
 stackTop      @ 0xffffdd0c: 0xaabbccdd
 ```
 
+The `charArray[4]` is sandwiched between `stackTop` and `stackBottom`. 
+We can access the `charArray` out-of-band, by using `charArray[-1]=0x11` and 
+`charArray[4]=0xdd`, which will access the neighbouring variables. 
 
+Does the result make any sense? Is the `top` in `stackTop` because of the memory address, or 
+the usage of the stack?
+
+Take a piece of paper and try to draw the variables in a stack frame. 
+
+
+## Struct
+
+A struct is just an array with different length of variables:
 ```
 ~/challenges/challenge02$ ./challenge02 struct
 struct cStruct {
@@ -55,7 +70,16 @@ cStruct.z[0] @ 0xffffdd0e (size 1)
 cStruct.z[1] @ 0xffffdd0f (size 1)
 ```
 
+The whole struct is just a continous piece of memory, indexed at different offsets. 
 
+
+## Strings / Char Arrays
+
+Strings in C are just byte arrays, ending with a null byte 0x00. 
+That means that we have one byte / character less space than the buffer is sized for. 
+So a 8 byte char buffer can hold a string of 7 bytes, and its terminating 0x00 byte. 
+
+In the following example, we accidently overwrite the trailing 0x00 byte of a string:
 ```
 ~/challenges/challenge02$ ./challenge02 strncpy
 char dest1[8] = "1234567\0";
@@ -68,24 +92,9 @@ dest1 @ 0xffffdcf8: 1234567
 dest2 @ 0xffffdcf0: AABBCCDD1234567 (missing nul terminator)
 ```
 
+As we can see, after copying 8 bytes "AABBCCDD" into a 8 byte char array,
+C thinks the string is actually "AABBCCDD123457", as it does not find the nul
+terminator. 
 
-## Questions
+Take a piece of paper, and draw the before/after `strncpy()` strings `dest1` and `dest2`. 
 
-0) Can you draw a picture of the variables of function `funcWithArray` ?
-
-1) Do the addresses of the variables make sense? Do they correspond with the allocations in the code?
-
-2) Why is charArray[4] = 0xdd?
-
-3) Why is charArray[-1] = 0x11?
-
-4) Why are the addresses of the variables inside the cStruct counting upwards, while the variables in `funcWithArray` they are counting down?
-
-
-## Answers
-
-2) charArray[4] is further "up" the stack (towards higher memory addresses), therefore adjectant to `stackTop` (which got initialized first).
-
-3) charArray[-1] is further "down" the stack (towards lower memory addresses), therefore we will access `stackBot` (which got initialized last).
-
-4) in `funcWithArray` they are allocated on the stack which grows downward, while cStruct is just a normal data structure like an array, where the individual elements get allocated behind each other.

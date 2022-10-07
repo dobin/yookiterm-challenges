@@ -16,7 +16,6 @@ You can compile it by calling `make` in the folder `~/challenges/challenge13`
 
 ### Vulnerability
 
-
 The vulnerability lies here:
 
 ```
@@ -42,6 +41,22 @@ void handleClient (int socket) {
 The vulnerability is identical to challenge12, but with an increased buffer size (from 128 to 256 bytes)
 
 ## Usage
+
+Start the server:
+```sh
+~/challenges/challenge13$ ./challenge13
+Starting server on port: 5001
+```
+
+If it cant be started:
+```sh
+~/challenges/challenge13$ ./challenge13
+Starting server on port: 5001
+ERROR on binding: Address already in use
+```
+
+Do `pkill gdb` and `pkill challenge13`. Maybe you have to wait a few mins
+until the socket is freed.
 
 The server expects two messages - similar to challenge12, but this time they
 are not read via stdin, but from a TCP/IP socket:
@@ -94,7 +109,7 @@ io.sendafter(b"Password: ", b"password")
 io.recvall()
 ```
 
-`io.recvall()` will basically wait until the process is exited. Without it (or something 
+`io.recvall()` will basically wait until the process is exited (we ignore what it receives). Without it (or something 
 similar like `io.interactive()`), the script would end quickly and takes GDB with it, making
 it impossible to use GDB. 
 

@@ -14,13 +14,18 @@ Tools used:
 
 ## Goal
 
-- Learn about memory layout and ELF
-- Get a feeling of useful Linux tools
+* Learn about memory layout and ELF
+* Get a feeling of useful Linux tools
 
 
 ## Source
 
-File: `~/challenges/challenge00/challenge00.c`
+* Source directory: `~/challenges/challenge00/`
+* Source files: [challenge00](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge00)
+
+You can compile it by calling `make` in the folder `~/challenges/challenge00`
+
+Source:
 ```c
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +39,6 @@ int main(int argc, char **argv) {
     printf("Hello %s\n", argv[1]);
 }
 ```
-You can compile it by calling `make` in the folder `~/challenges/challenge00`
 
 
 ## Static analysis
@@ -52,14 +56,14 @@ The binary is therefore:
 * 32 bit
 * On an little endian machine (`LSB`)
 * Intel architecture (Intel 80386 is x86)
-* Dynamically linked
-* Not stripped
+* Dynamically linked (not static, it depends on shared libraries)
+* Not stripped (debug symbols are still there)
 
 
 ### readelf command
 
 The command `readelf` displays information about the sections and segments of
-the program on disk.
+the program on disk:
 
 ```sh
 ~/challenges/challenge00$ readelf -l challenge00
@@ -101,7 +105,7 @@ Program Headers:
 
 ### objdump command
 
-The command `objdump -d` will decompile the program:
+The command `objdump -d` will decompile the program on disk:
 
 ```sh
 ~/challenges/challenge00# objdump -d challenge00 | less
@@ -165,22 +169,19 @@ Let's debug the binary using GDB debugger:
 ```sh
 ~/challenges/challenge00$ gdb -q challenge00
 Reading symbols from challenge00...
-(No debugging symbols found in challenge00)
-(gdb) run test
-Starting program: /root/challenges/challenge00/challenge00 test
-Hello test
-[Inferior 1 (process 251) exited normally]
-(gdb)
+gef➤  run Argument1
+Starting program: /root/challenges/challenge00/challenge00 Argument1
+Hello Argument1
+[Inferior 1 (process 127) exited normally]
+gef➤  quit
+~/challenges/challenge00$
 ```
 
-The program has run and is exited cleanly.
-
-Now let's disassemble main with the `disass` command. This is basically the same as using `objdump` - with the 
-advantage that we can exactly see which assembler instruction we currently execute (see arrow at the beginning of the line after "Dump of assembler code")
+Now let's disassemble main with the `disass` command. This is basically the same as using `objdump -d`:
 ```sh
-(gdb) disass main
+gef➤  disas main
 Dump of assembler code for function main:
-=> 0x08049172 <+0>:     lea    ecx,[esp+0x4]
+   0x08049172 <+0>:     lea    ecx,[esp+0x4]
    0x08049176 <+4>:     and    esp,0xfffffff0
    0x08049179 <+7>:     push   DWORD PTR [ecx-0x4]
    0x0804917c <+10>:    push   ebp
@@ -213,46 +214,80 @@ Dump of assembler code for function main:
    0x080491cb <+89>:    leave
    0x080491cc <+90>:    lea    esp,[ecx-0x4]
    0x080491cf <+93>:    ret
+End of assembler dump.
 ```
 
 Lets set a breakpoint on the `main` function, and start the program so we have a running process, 
-and not just a static ELF file.
+and not just a static ELF file:
 
 ```sh
-(gdb) b *main
-Breakpoint 1 at 0x8049172
-(gdb) run
-Starting program: /root/challenges/challenge00/challenge00 test
+gef➤  b *main
+Breakpoint 1 at 0x8049172: file challenge00.c, line 4.
+gef➤  r Testing
+Starting program: /root/challenges/challenge00/challenge00 Testing
 
-Breakpoint 1, 0x08049172 in main ()
+Breakpoint 1, main (argc=0x2, argv=0xffffdda4) at challenge00.c:4
+4       int main(int argc, char **argv) {
+[ Legend: Modified register | Code | Heap | Stack | String ]
+──────────────────────────────────────────────────────────────────────────── source:challenge00.c+4 ────
+      3
+         // argc=0x2, argv=0xffffdd04  →  [...]  →  "/root/challenges/challenge00/challenge00"
+ →    4  int main(int argc, char **argv) {
+      5      if (argc == 1) {
+───────────────────────────────────────────────────────────────────────────────────────── registers ────
+$eax   : 0xf7fc3ae8  →  0xffffddb0  →  0xffffdee7  →  "USER=root"
+$ebx   : 0x0
+$ecx   : 0x206a1cc8
+$edx   : 0xffffdd34  →  0x00000000
+$esp   : 0xffffdcfc  →  0xf7dfae46  →  <__libc_start_main+262> add esp, 0x10
+$ebp   : 0x0
+$esi   : 0xf7fc1000  →  0x001e4d6c
+$edi   : 0xf7fc1000  →  0x001e4d6c
+$eip   : 0x8049172  →  <main+0> lea ecx, [esp+0x4]
+─────────────────────────────────────────────────────────────────────────────────────── code:x86:32 ────
+    0x8049168 <__do_global_dtors_aux+40> lea    esi, [esi+eiz*1+0x0]
+    0x804916f <__do_global_dtors_aux+47> nop
+    0x8049170 <frame_dummy+0>  jmp    0x8049100 <register_tm_clones>
+ →  0x8049172 <main+0>         lea    ecx, [esp+0x4]
+    0x8049176 <main+4>         and    esp, 0xfffffff0
+─────────────────────────────────────────────────────────────────────────────────────────── threads ────
+[#0] Id 1, Name: "challenge00", stopped 0x8049172 in main (), reason: BREAKPOINT
+────────────────────────────────────────────────────────────────────────────────────────────────────────
 ```
 
-The process is stopped, and we are able to inspect all its data, including registers
-und RAM.
+The process is stopped, and we are able to inspect all its data, including registers and RAM.
+
+Take a moment to orient yourself in the output. From top to bottom we can see: 
+* That we reached Breakpoint 1
+* The source code of the instruction we are currently stopped at
+* Most register values, and where they point to
+* The assembly instructions, and where we stopped at (here at main+0, indicated by an arrow)
+* GDB Status output
 
 
 ### Register
 
+To display the registers again, or individual ones:
 ```
-(gdb) info register
-eax            0xf7fc3ae8          -134464792
-ecx            0x6f822c15          1870801941
-edx            0xffffdd44          -8892
-ebx            0x0                 0
-esp            0xffffdd0c          0xffffdd0c
+gef➤  info register
+eax            0xf7fc3ae8          0xf7fc3ae8
+ecx            0x206a1cc8          0x206a1cc8
+edx            0xffffdd34          0xffffdd34
+ebx            0x0                 0x0
+esp            0xffffdcfc          0xffffdcfc
 ebp            0x0                 0x0
-esi            0xf7fc1000          -134475776
-edi            0xf7fc1000          -134475776
+esi            0xf7fc1000          0xf7fc1000
+edi            0xf7fc1000          0xf7fc1000
 eip            0x8049172           0x8049172 <main>
 eflags         0x246               [ PF ZF IF ]
-cs             0x23                35
-ss             0x2b                43
-ds             0x2b                43
-es             0x2b                43
-fs             0x0                 0
-gs             0x63                99
-(gdb) i r eax
-eax            0xf7fc3ae8          -134464792
+cs             0x23                0x23
+ss             0x2b                0x2b
+ds             0x2b                0x2b
+es             0x2b                0x2b
+fs             0x0                 0x0
+gs             0x63                0x63
+gef➤  i r eax
+eax            0xf7fc3ae8          0xf7fc3ae8
 ```
 
 
@@ -261,13 +296,11 @@ eax            0xf7fc3ae8          -134464792
 Lets have a look at the stack, referenced via register `$esp`:
 
 ```
-(gdb) x/16dx $esp
-0xffffdd0c:     0xf7dfae46      0x00000002      0xffffddb4      0xffffddc0
-0xffffdd1c:     0xffffdd44      0xffffdd54      0xf7ffdb40      0xf7fca410
-0xffffdd2c:     0xf7fc1000      0x00000001      0x00000000      0xffffdd98
-0xffffdd3c:     0x00000000      0xf7ffd000      0x00000000      0xf7fc1000
-(gdb) i r esp
-esp            0xffffdd0c          0xffffdd0c
+gef➤  x/16dx $esp
+0xffffdcfc:     0xf7dfae46      0x00000002      0xffffdda4      0xffffddb0
+0xffffdd0c:     0xffffdd34      0xffffdd44      0xf7ffdb40      0xf7fca410
+0xffffdd1c:     0xf7fc1000      0x00000001      0x00000000      0xffffdd88
+0xffffdd2c:     0x00000000      0xf7ffd000      0x00000000      0xf7fc1000
 ```
 
 This e`X`amines `16` elements of type `d`ouble (4 bytes) and displays it as he`x` number starting from memory address in register `$esp`.
@@ -275,33 +308,32 @@ This e`X`amines `16` elements of type `d`ouble (4 bytes) and displays it as he`x
 
 ### Memory Mapping
 
-By using `info proc mappings`, we can see the currently used memory mappings:
+By using `vmmap`, we can see the currently used memory mappings:
 ```sh
-(gdb) info proc mappings
-process 255
-Mapped address spaces:
+gef➤  vmmap
+[ Legend:  Code | Heap | Stack ]
+Start      End        Offset     Perm Path
+0x8048000 0x8049000 0x000000 r-- /root/challenges/challenge00/challenge00
+0x8049000 0x804a000 0x001000 r-x /root/challenges/challenge00/challenge00
+0x804a000 0x804b000 0x002000 r-- /root/challenges/challenge00/challenge00
+0x804b000 0x804c000 0x002000 r-- /root/challenges/challenge00/challenge00
+0x804c000 0x804d000 0x003000 rw- /root/challenges/challenge00/challenge00
+0xf7ddc000 0xf7df9000 0x000000 r-- /usr/lib/i386-linux-gnu/libc-2.31.so
+0xf7df9000 0xf7f4e000 0x01d000 r-x /usr/lib/i386-linux-gnu/libc-2.31.so
+0xf7f4e000 0xf7fbf000 0x172000 r-- /usr/lib/i386-linux-gnu/libc-2.31.so
+0xf7fbf000 0xf7fc1000 0x1e2000 r-- /usr/lib/i386-linux-gnu/libc-2.31.so
+0xf7fc1000 0xf7fc3000 0x1e4000 rw- /usr/lib/i386-linux-gnu/libc-2.31.so
+0xf7fc3000 0xf7fc5000 0x000000 rw-
+0xf7fca000 0xf7fcc000 0x000000 rw-
+0xf7fcc000 0xf7fd0000 0x000000 r-- [vvar]
+0xf7fd0000 0xf7fd2000 0x000000 r-x [vdso]
+0xf7fd2000 0xf7fd3000 0x000000 r-- /usr/lib/i386-linux-gnu/ld-2.31.so
+0xf7fd3000 0xf7ff0000 0x001000 r-x /usr/lib/i386-linux-gnu/ld-2.31.so
+0xf7ff0000 0xf7ffb000 0x01e000 r-- /usr/lib/i386-linux-gnu/ld-2.31.so
+0xf7ffc000 0xf7ffd000 0x029000 r-- /usr/lib/i386-linux-gnu/ld-2.31.so
+0xf7ffd000 0xf7ffe000 0x02a000 rw- /usr/lib/i386-linux-gnu/ld-2.31.so
+0xfffdd000 0xffffe000 0x000000 rw- [stack]
 
-        Start Addr   End Addr       Size     Offset objfile
-         0x8048000  0x8049000     0x1000        0x0 /root/challenges/challenge00/challenge00
-         0x8049000  0x804a000     0x1000     0x1000 /root/challenges/challenge00/challenge00
-         0x804a000  0x804b000     0x1000     0x2000 /root/challenges/challenge00/challenge00
-         0x804b000  0x804c000     0x1000     0x2000 /root/challenges/challenge00/challenge00
-         0x804c000  0x804d000     0x1000     0x3000 /root/challenges/challenge00/challenge00
-        0xf7ddc000 0xf7df9000    0x1d000        0x0 /usr/lib/i386-linux-gnu/libc-2.31.so
-        0xf7df9000 0xf7f4e000   0x155000    0x1d000 /usr/lib/i386-linux-gnu/libc-2.31.so
-        0xf7f4e000 0xf7fbf000    0x71000   0x172000 /usr/lib/i386-linux-gnu/libc-2.31.so
-        0xf7fbf000 0xf7fc1000     0x2000   0x1e2000 /usr/lib/i386-linux-gnu/libc-2.31.so
-        0xf7fc1000 0xf7fc3000     0x2000   0x1e4000 /usr/lib/i386-linux-gnu/libc-2.31.so
-        0xf7fc3000 0xf7fc5000     0x2000        0x0
-        0xf7fca000 0xf7fcc000     0x2000        0x0
-        0xf7fcc000 0xf7fd0000     0x4000        0x0 [vvar]
-        0xf7fd0000 0xf7fd2000     0x2000        0x0 [vdso]
-        0xf7fd2000 0xf7fd3000     0x1000        0x0 /usr/lib/i386-linux-gnu/ld-2.31.so
-        0xf7fd3000 0xf7ff0000    0x1d000     0x1000 /usr/lib/i386-linux-gnu/ld-2.31.so
-        0xf7ff0000 0xf7ffb000     0xb000    0x1e000 /usr/lib/i386-linux-gnu/ld-2.31.so
-        0xf7ffc000 0xf7ffd000     0x1000    0x29000 /usr/lib/i386-linux-gnu/ld-2.31.so
-        0xf7ffd000 0xf7ffe000     0x1000    0x2a000 /usr/lib/i386-linux-gnu/ld-2.31.so
-        0xfffdd000 0xffffe000    0x21000        0x0 [stack]
 ```
 
 The same information is accessible via the proc filesystem. You'll have to find
@@ -311,32 +343,30 @@ The process id is 394. We can directly execute bash commands in GDB with `! <com
 a second terminal.
 
 ```sh
-(gdb) ! cat /proc/255/maps
-08048000-08049000 r--p 00000000 00:36 66047                              /root/challenges/challenge00/challenge00
-08049000-0804a000 r-xp 00001000 00:36 66047                              /root/challenges/challenge00/challenge00
-0804a000-0804b000 r--p 00002000 00:36 66047                              /root/challenges/challenge00/challenge00
-0804b000-0804c000 r--p 00002000 00:36 66047                              /root/challenges/challenge00/challenge00
-0804c000-0804d000 rw-p 00003000 00:36 66047                              /root/challenges/challenge00/challenge00
-f7ddc000-f7df9000 r--p 00000000 00:36 1122                               /usr/lib/i386-linux-gnu/libc-2.31.so
-f7df9000-f7f4e000 r-xp 0001d000 00:36 1122                               /usr/lib/i386-linux-gnu/libc-2.31.so
-f7f4e000-f7fbf000 r--p 00172000 00:36 1122                               /usr/lib/i386-linux-gnu/libc-2.31.so
-f7fbf000-f7fc1000 r--p 001e2000 00:36 1122                               /usr/lib/i386-linux-gnu/libc-2.31.so
-f7fc1000-f7fc3000 rw-p 001e4000 00:36 1122                               /usr/lib/i386-linux-gnu/libc-2.31.so
+gef➤  ! cat /proc/239/maps
+08048000-08049000 r--p 00000000 00:44 137273                             /root/challenges/challenge00/challenge00
+08049000-0804a000 r-xp 00001000 00:44 137273                             /root/challenges/challenge00/challenge00
+0804a000-0804b000 r--p 00002000 00:44 137273                             /root/challenges/challenge00/challenge00
+0804b000-0804c000 r--p 00002000 00:44 137273                             /root/challenges/challenge00/challenge00
+0804c000-0804d000 rw-p 00003000 00:44 137273                             /root/challenges/challenge00/challenge00
+f7ddc000-f7df9000 r--p 00000000 00:44 1081                               /usr/lib/i386-linux-gnu/libc-2.31.so
+f7df9000-f7f4e000 r-xp 0001d000 00:44 1081                               /usr/lib/i386-linux-gnu/libc-2.31.so
+f7f4e000-f7fbf000 r--p 00172000 00:44 1081                               /usr/lib/i386-linux-gnu/libc-2.31.so
+f7fbf000-f7fc1000 r--p 001e2000 00:44 1081                               /usr/lib/i386-linux-gnu/libc-2.31.so
+f7fc1000-f7fc3000 rw-p 001e4000 00:44 1081                               /usr/lib/i386-linux-gnu/libc-2.31.so
 f7fc3000-f7fc5000 rw-p 00000000 00:00 0
 f7fca000-f7fcc000 rw-p 00000000 00:00 0
 f7fcc000-f7fd0000 r--p 00000000 00:00 0                                  [vvar]
 f7fd0000-f7fd2000 r-xp 00000000 00:00 0                                  [vdso]
-f7fd2000-f7fd3000 r--p 00000000 00:36 1081                               /usr/lib/i386-linux-gnu/ld-2.31.so
-f7fd3000-f7ff0000 r-xp 00001000 00:36 1081                               /usr/lib/i386-linux-gnu/ld-2.31.so
-f7ff0000-f7ffb000 r--p 0001e000 00:36 1081                               /usr/lib/i386-linux-gnu/ld-2.31.so
-f7ffc000-f7ffd000 r--p 00029000 00:36 1081                               /usr/lib/i386-linux-gnu/ld-2.31.so
-f7ffd000-f7ffe000 rw-p 0002a000 00:36 1081                               /usr/lib/i386-linux-gnu/ld-2.31.so
+f7fd2000-f7fd3000 r--p 00000000 00:44 1040                               /usr/lib/i386-linux-gnu/ld-2.31.so
+f7fd3000-f7ff0000 r-xp 00001000 00:44 1040                               /usr/lib/i386-linux-gnu/ld-2.31.so
+f7ff0000-f7ffb000 r--p 0001e000 00:44 1040                               /usr/lib/i386-linux-gnu/ld-2.31.so
+f7ffc000-f7ffd000 r--p 00029000 00:44 1040                               /usr/lib/i386-linux-gnu/ld-2.31.so
+f7ffd000-f7ffe000 rw-p 0002a000 00:44 1040                               /usr/lib/i386-linux-gnu/ld-2.31.so
 fffdd000-ffffe000 rw-p 00000000 00:00 0                                  [stack]
 ```
 
 
 ## Things to think about
 
-* Where does the stack start? 
-* What is the base address of the code section?
-* Into which segment does the register `rax` point to?
+* The difference between a program (on-disk) and a process (in-memory)

@@ -1,20 +1,26 @@
-# Introduction to memory layout - variable segment analysis
+# Introduction to memory layout: C variable analysis
 
 ## Introduction
 
-In this challenge, we have a program which prints the address of various variables
-to stdout. Using `readelf`, we will reverse in which ELF sections and segments
-these variables are stored.
+In this challenge, we have a program which prints the address of various types of C variables.
+Using `readelf`, we will reverse in which ELF sections and segments these variables are stored,
+and find their data in the ELF file on disk. 
+
 
 ## Goal
 
-- Learn more about memory layout and ELF
-- Get a feeling of useful Linux tools
+* Learn more about ELF program/process memory layout and loading
+* Get a feeling of the tool `readelf`, and learn how to interpret its output
 
 
 ## Source
 
-File: `~/challenges/challenge01/challenge01.c`
+* Source directory: `~/challenges/challenge01/`
+* Source files: [challenge01](https://github.com/dobin/yookiterm-challenges-files/tree/master/challenge01)
+
+You can compile it by calling `make` in the folder `~/challenges/challenge01`
+
+Source:
 ```c
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +39,6 @@ int main(int argc, char **argv) {
 }
 ```
 
-You can compile it by calling `make` in the folder `~/challenges/challenge01`
 
 ## Output
 
@@ -47,6 +52,9 @@ Stack variable:         0xffffdd2c
 Heap variable:          0x804d1a0
 Function:               0x8049172
 ```
+
+These are the memory addresses (in RAM) of the C variables. They are located in 
+different ELF segments when loaded from disk. 
 
 
 ## Analysis
@@ -98,19 +106,19 @@ Entry point 0x8049060
 There are 11 program headers, starting at offset 52
 
 Program Headers:
-  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-  PHDR           0x000034 0x08048034 0x08048034 0x00160 0x00160 R   0x4
-  INTERP         0x000194 0x08048194 0x08048194 0x00013 0x00013 R   0x1
+    Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+00  PHDR           0x000034 0x08048034 0x08048034 0x00160 0x00160 R   0x4
+01  INTERP         0x000194 0x08048194 0x08048194 0x00013 0x00013 R   0x1
       [Requesting program interpreter: /lib/ld-linux.so.2]
-  LOAD           0x000000 0x08048000 0x08048000 0x0030c 0x0030c R   0x1000
-  LOAD           0x001000 0x08049000 0x08049000 0x002ec 0x002ec R E 0x1000
-  LOAD           0x002000 0x0804a000 0x0804a000 0x00260 0x00260 R   0x1000
-  LOAD           0x002f0c 0x0804bf0c 0x0804bf0c 0x0011e 0x00120 RW  0x1000
-  DYNAMIC        0x002f14 0x0804bf14 0x0804bf14 0x000e8 0x000e8 RW  0x4
-  NOTE           0x0001a8 0x080481a8 0x080481a8 0x00044 0x00044 R   0x4
-  GNU_EH_FRAME   0x0020ac 0x0804a0ac 0x0804a0ac 0x00054 0x00054 R   0x4
-  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x10
-  GNU_RELRO      0x002f0c 0x0804bf0c 0x0804bf0c 0x000f4 0x000f4 R   0x1
+02  LOAD           0x000000 0x08048000 0x08048000 0x0030c 0x0030c R   0x1000
+03  LOAD           0x001000 0x08049000 0x08049000 0x002ec 0x002ec R E 0x1000
+04  LOAD           0x002000 0x0804a000 0x0804a000 0x00260 0x00260 R   0x1000
+05  LOAD           0x002f0c 0x0804bf0c 0x0804bf0c 0x0011e 0x00120 RW  0x1000
+06  DYNAMIC        0x002f14 0x0804bf14 0x0804bf14 0x000e8 0x000e8 RW  0x4
+07  NOTE           0x0001a8 0x080481a8 0x080481a8 0x00044 0x00044 R   0x4
+08  GNU_EH_FRAME   0x0020ac 0x0804a0ac 0x0804a0ac 0x00054 0x00054 R   0x4
+09  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x10
+10  GNU_RELRO      0x002f0c 0x0804bf0c 0x0804bf0c 0x000f4 0x000f4 R   0x1
 
  Section to Segment mapping:
   Segment Sections...
@@ -127,14 +135,31 @@ Program Headers:
    10     .init_array .fini_array .dynamic .got
 ```
 
-### Analyze the Global variable
+Note that i added the segment numbers in front of the "Program Headers" output so its
+clearer in the discussion. 
 
-The address of the global variable is `0x804c020`. If we check the section
-headers at the column "Addr", we'll see that this variable is located in the
+
+## Analyze the Global variable
+
+The address of the global variable is `0x804c020`. If we check the Section
+Headers at the column "Addr", we'll see that this variable is located in the
 section with the name `.data` with number 23, which starts at `0x804c018`. `.data` contains
 static initialized data and is writeable.
+```
+  [23] .data             PROGBITS        0804c018 003018 000012 00  WA  0   0  4
+```
 
-The file offset of `.data` is "0x3018". We can dump it with a tool like `hexdump`, by
+The program (segment) headers are an alternative view of the ELF file, which we will
+mostly use. The location `0x804c020` is located in the Segment `05`, which we can see either
+by looking at the VirtAddr/PhysAddr row in the Program Headers output (and count the segment
+headers starting by 0). Or by using the previous information and looking at the Section to Segment
+mapping: .data is in Segment `05`.
+```
+05  LOAD           0x002f0c 0x0804bf0c 0x0804bf0c 0x0011e 0x00120 RW  0x1000
+```
+
+The file offset of `.data` section is "0x3018", with size `0x12`. 
+We can dump it with a tool like `hexdump`, by
 using the `s` parameter to skip the same amount of bytes as the offset specifies:
 
 ```sh
@@ -144,12 +169,20 @@ using the `s` parameter to skip the same amount of bytes as the offset specifies
 ```
 
 As we can see, the content of the C variable `globalVariable` is written in
-the ELF binary: `GlobalVar`.
+the ELF binary: `GlobalVar`. 
+
+The file offset of `05` segment is `0x002f0c`, and its size is `0x0011e`. Way bigger
+that just the .data section, as it contains several other sections.
+
+
+## Further Analysis
+
+* In which section and segment is the variable `globalStaticVariable` stored?
+* In which section and segment is the variable `localStackVar` stored?
+* In which section and segment is the variable `heapVar` stored?
+* Can you locate the content of the variables in the ELF binary? If not, why not?
 
 
 ## Things to think about
 
-* In which section and segment is the variable `globalStaticVariable` stored?
-* In which section and segment is the variable `heapVar` stored?
-* In which section and segment is the variable `localStackVar` stored?
-* Can you locate the content of the variables in the ELF binary? If not, why not?
+* The connection between a program (on-disk) and a process (in-memory), as in loading of an ELF file

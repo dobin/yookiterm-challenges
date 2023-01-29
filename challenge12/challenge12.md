@@ -214,7 +214,7 @@ Use the shellcode in variable `main():username`, NOT `handleData():name` as SIP.
 
 Some tipps:
 * `gdb.attach(io, 'continue')` the second argument are GDB commands. Remove the `continue` to interact with GDB on startup. Or add breakpoints like `b *handleData+75` directly
-* You can re-use the exploit pattern function `make()` from `challenge11-exploit.py
+* You can re-use the exploit pattern function `make()` from `challenge11-exploit.py`
 * Use `io.interactive()` instead of `io.poll()` once the shellcode gets executed reliably
 * set breakpoints on the end of handleData() to check if overwritten SIP points to your shellcode
 

@@ -139,7 +139,7 @@ We need to find the address of the buffer where our shellcode is stored in the p
 This buffer transferred via `argv[1]` into `char name[128]` in the function `handleData()`. 
 
 Therefore we can just break at the end of `handleData()`, and print the address
-of the `user` variable:
+of the `name` variable:
 
 Check disassembly of handleData:
 ```sh

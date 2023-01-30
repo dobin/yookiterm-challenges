@@ -318,7 +318,7 @@ As expected: We see the NOP sled, and the shellcode after starting at address `0
 
 To debug it, we need to enable core files first with:
 ```
-~/challenges/challenge11$ ulimit -n unlimited
+~/challenges/challenge11$ ulimit -c unlimited
 ```
 
 Lets test the exploit without starting it under GDB:
